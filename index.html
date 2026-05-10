@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palette Gen</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #0a0a0a;
+            color: #e8e4df;
+            min-height: 100vh;
+            padding: 40px 24px;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 3rem;
+            letter-spacing: -1px;
+            margin-bottom: 6px;
+            color: #f5f0eb;
+        }
+
+        .subtitle {
+            color: #7a756f;
+            font-size: 0.95rem;
+            margin-bottom: 48px;
+        }
+
+        .section-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #c9c2ba;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 18px;
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            color: #e8e4df;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #4a4540;
+        }
+
+        input[type="text"]::placeholder {
+            color: #4a4540;
+        }
+
+        button {
+            padding: 14px 28px;
+            background: #e8e4df;
+            color: #0a0a0a;
+            border: none;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #f5f0eb;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            min-height: 0;
+            transition: min-height 0.3s;
+        }
+
+        .palette-grid.active {
+            min-height: 200px;
+        }
+
+        .color-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 16px 12px;
+            min-height: 200px;
+            position: relative;
+            opacity: 0;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .color-card:nth-child(1) { animation-delay: 0.05s; }
+        .color-card:nth-child(2) { animation-delay: 0.1s; }
+        .color-card:nth-child(3) { animation-delay: 0.15s; }
+        .color-card:nth-child(4) { animation-delay: 0.2s; }
+        .color-card:nth-child(5) { animation-delay: 0.25s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .color-hex {
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+            margin-bottom: 4px;
+        }
+
+        .color-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .color-desc {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            line-height: 1.4;
+        }
+
+        .color-card .color-hex,
+        .color-card .color-name,
+        .color-card .color-desc {
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .prompt-label {
+            text-align: center;
+            color: #4a4540;
+            font-size: 0.8rem;
+            font-style: italic;
+            margin-bottom: 48px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #1e1e1e;
+            margin: 48px 0;
+        }
+
+        .mix-section {
+            margin-bottom: 48px;
+        }
+
+        .mix-inputs {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .color-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            background: #161616;
+            cursor: pointer;
+            padding: 2px;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 3px;
+        }
+
+        .mix-plus {
+            color: #4a4540;
+            font-size: 1.2rem;
+        }
+
+        .mix-result {
+            display: none;
+            border-radius: 12px;
+            overflow: hidden;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .mix-result.active {
+            display: block;
+        }
+
+        .mix-result-header {
+            display: flex;
+            align-items: stretch;
+            min-height: 120px;
+        }
+
+        .mix-color-preview {
+            width: 120px;
+            min-height: 120px;
+            flex-shrink: 0;
+        }
+
+        .mix-info {
+            padding: 20px 24px;
+            background: #161616;
+            flex: 1;
+        }
+
+        .mix-result-name {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+            color: #f5f0eb;
+        }
+
+        .mix-result-hex {
+            font-size: 0.8rem;
+            color: #7a756f;
+            margin-bottom: 12px;
+        }
+
+        .mix-result-desc {
+            font-size: 0.85rem;
+            color: #c9c2ba;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .mix-result-tip {
+            font-size: 0.8rem;
+            color: #7a756f;
+            line-height: 1.5;
+            padding-left: 12px;
+            border-left: 2px solid #2a2a2a;
+        }
+
+        .loading {
+            text-align: center;
+            color: #4a4540;
+            padding: 40px;
+            font-size: 0.9rem;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        .error {
+            text-align: center;
+            color: #a05050;
+            padding: 20px;
+            font-size: 0.85rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: #2a2a2a;
+            font-size: 0.75rem;
+            margin-top: 64px;
+            padding-top: 24px;
+            border-top: 1px solid #1a1a1a;
+        }
+
+        .footer a {
+            color: #4a4540;
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .palette-grid { grid-template-columns: repeat(5, 1fr); }
+            .color-card { min-height: 160px; padding: 10px 8px; }
+            .color-name { font-size: 0.7rem; }
+            .color-desc { display: none; }
+            .input-group { flex-direction: column; }
+            .mix-inputs { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Palette Gen</h1>
+        <p class="subtitle">AI-powered color palettes for acrylic pour painters</p>
+
+        <p class="section-title">Generate a palette</p>
+        <div class="input-group">
+            <input type="text" id="promptInput" placeholder="Describe a mood, theme, or scene..." />
+            <button id="generateBtn" onclick="generatePalette()">Generate</button>
+        </div>
+
+        <div id="paletteResult"></div>
+
+        <div class="divider"></div>
+
+        <div class="mix-section">
+            <p class="section-title">Mix two colors</p>
+            <div class="mix-inputs">
+                <div class="color-input-wrapper">
+                    <input type="color" id="color1" value="#8B4513" />
+                    <input type="text" id="color1Hex" value="#8B4513" style="width: 100px;" />
+                </div>
+                <span class="mix-plus">+</span>
+                <div class="color-input-wrapper">
+                    <input type="color" id="color2" value="#DAA520" />
+                    <input type="text" id="color2Hex" value="#DAA520" style="width: 100px;" />
+                </div>
+                <button id="mixBtn" onclick="mixColors()">Mix</button>
+            </div>
+
+            <div id="mixResult" class="mix-result"></div>
+        </div>
+
+        <div class="footer">
+            Built by Roland Gebe | <a href="https://github.com/gerocael/palette-gen">GitHub</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('color1').addEventListener('input', (e) => {
+            document.getElementById('color1Hex').value = e.target.value.toUpperCase();
+        });
+        document.getElementById('color2').addEventListener('input', (e) => {
+            document.getElementById('color2Hex').value = e.target.value.toUpperCase();
+        });
+        document.getElementById('color1Hex').addEventListener('input', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                document.getElementById('color1').value = e.target.value;
+            }
+        });
+        document.getElementById('color2Hex').addEventListener('input', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                document.getElementById('color2').value = e.target.value;
+            }
+        });
+
+        document.getElementById('promptInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') generatePalette();
+        });
+
+        function getTextColor(hex) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            return luminance > 0.5 ? '#1a1a1a' : '#f5f0eb';
+        }
+
+        async function generatePalette() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+            document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>';
+            return;
+}
+
+            const btn = document.getElementById('generateBtn');
+            const result = document.getElementById('paletteResult');
+
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            result.innerHTML = '<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
+
+            try {
+                const response = await fetch('/palette/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Failed to generate');
+                }
+
+                const data = await response.json();
+
+                let html = '<div class="palette-grid active">';
+                data.colors.forEach(color => {
+                    const textColor = getTextColor(color.hex_code);
+                    html += `
+                        <div class="color-card" style="background: ${color.hex_code}; color: ${textColor}">
+                            <div class="color-hex">${color.hex_code}</div>
+                            <div class="color-name">${color.name}</div>
+                            <div class="color-desc">${color.description}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                html += `<div class="prompt-label">"${data.prompt}"</div>`;
+
+                result.innerHTML = html;
+            } catch (err) {
+                result.innerHTML = `<div class="error">${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate';
+            }
+        }
+
+        async function mixColors() {
+            const color1 = document.getElementById('color1Hex').value;
+            const color2 = document.getElementById('color2Hex').value;
+
+            if (!color1 || !color2) return;
+
+            const btn = document.getElementById('mixBtn');
+            const result = document.getElementById('mixResult');
+
+            btn.disabled = true;
+            btn.textContent = 'Mixing...';
+            result.className = 'mix-result active';
+            result.innerHTML = '<div class="loading">Analyzing mix<span class="loading-dots"></span></div>';
+
+            try {
+                const response = await fetch('/palette/mix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ color1, color2 })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Failed to mix');
+                }
+
+                const data = await response.json();
+
+                result.innerHTML = `
+                    <div class="mix-result-header">
+                        <div class="mix-color-preview" style="background: ${data.result_hex}"></div>
+                        <div class="mix-info">
+                            <div class="mix-result-name">${data.result_name}</div>
+                            <div class="mix-result-hex">${data.result_hex}</div>
+                            <div class="mix-result-desc">${data.description}</div>
+                            <div class="mix-result-tip">${data.pour_tip}</div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                result.innerHTML = `<div class="error">${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Mix';
+            }
+        }
+    </script>
+</body>
+</html>
