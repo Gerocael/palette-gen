@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from palette_service import generate_palette
 
 app = FastAPI()
 
@@ -16,15 +17,20 @@ class PaletteResponse(BaseModel):
     colors: list[Color]
 
 @app.post("/palette/generate")
-def generate_palette(request: PaletteRequest):
-    # Hardcoded response for now, we'll add Claude later
-    return PaletteResponse(
-        prompt=request.prompt,
-        colors=[
-            Color(hex_code="#8B4513", name="Saddle Brown", description="Warm earthy grounding tone"),
-            Color(hex_code="#DAA520", name="Goldenrod", description="Rich autumn warmth"),
-            Color(hex_code="#2E8B57", name="Sea Green", description="Deep forest calm"),
-            Color(hex_code="#CD853F", name="Peru", description="Soft sandy warmth"),
-            Color(hex_code="#556B2F", name="Dark Olive", description="Quiet natural depth"),
+def create_palette(request: PaletteRequest):
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+    
+    try:
+        raw_colors = generate_palette(request.prompt)
+        colors = [
+            Color(
+                hex_code=c["hexCode"],
+                name=c["colorName"],
+                description=c["emotionalDescription"]
+            )
+            for c in raw_colors
         ]
-    )
+        return PaletteResponse(prompt=request.prompt, colors=colors)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate palette: {str(e)}")
