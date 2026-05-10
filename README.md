@@ -1,5 +1,7 @@
 Palette Generator API
 A REST API that uses AI to generate color palettes for artists, especially acrylic pour painters. Give it a mood, theme, or description and it returns a thoughtful palette with hex codes, names, and emotional descriptions.
+Live demo: https://palette-gen-heti.onrender.com/
+
 Tech Stack
 
 Python
