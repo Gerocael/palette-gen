@@ -7,48 +7,67 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'DM Sans', sans-serif; background: #0a0a0a; color: #e8e4df; min-height: 100vh; }
-        .nav { position: sticky; top: 0; z-index: 100; background: rgba(10,10,10,0.92); backdrop-filter: blur(10px); border-bottom: 1px solid #1a1a1a; padding: 14px 24px; }
+        :root {
+            --bg: #0a0a0a; --nav-bg: rgba(10,10,10,0.92);
+            --surf: #161616; --surf-2: #1a1a1a; --surf-3: #1e1e1e; --surf-h: #222;
+            --bd: #2a2a2a; --bd-s: #1a1a1a; --bd-f: #222; --bd-m: #333; --bd-h: #4a4540;
+            --tx: #e8e4df; --tx-b: #f5f0eb; --tx-2: #c9c2ba; --tx-3: #7a756f; --tx-p: #4a4540;
+            --btn: #e8e4df; --btn-tx: #0a0a0a; --btn-h: #f5f0eb;
+            --chip-in: #0a0a0a; --chip-out: #e8e4df;
+            --err: #a05050; --shad: rgba(0,0,0,0.5);
+        }
+        body.light {
+            --bg: #f5f2ee; --nav-bg: rgba(245,242,238,0.95);
+            --surf: #ffffff; --surf-2: #ede9e4; --surf-3: #e4e0db; --surf-h: #dedad5;
+            --bd: #d0cbc5; --bd-s: #ddd9d3; --bd-f: #cac5bf; --bd-m: #b8b3ad; --bd-h: #8a857f;
+            --tx: #1e1a17; --tx-b: #0f0c0a; --tx-2: #4a4540; --tx-3: #8a8480; --tx-p: #a8a49f;
+            --btn: #1e1a17; --btn-tx: #f5f2ee; --btn-h: #0f0c0a;
+            --chip-in: #f5f2ee; --chip-out: #1e1a17;
+            --err: #b04040; --shad: rgba(0,0,0,0.12);
+        }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--tx); min-height: 100vh; transition: background 0.2s, color 0.2s; }
+        .nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(10px); border-bottom: 1px solid var(--bd-s); padding: 14px 24px; }
         .nav-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 16px; }
-        .nav-brand { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #f5f0eb; margin-right: auto; }
-        .nav-btn { padding: 8px 16px; background: transparent; color: #7a756f; border: 1px solid #2a2a2a; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .nav-btn:hover { background: #161616; color: #c9c2ba; border-color: #4a4540; }
-        .nav-btn.active { background: #e8e4df; color: #0a0a0a; border-color: #e8e4df; }
+        .nav-brand { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); margin-right: auto; }
+        .nav-btn { padding: 8px 16px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .nav-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
+        .nav-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
+        .theme-btn { padding: 8px 12px; font-size: 0.9rem; line-height: 1; }
         .page-wrapper { display: flex; gap: 40px; max-width: 960px; margin: 0 auto; padding: 0 24px; align-items: flex-start; }
         .config-panel { width: 172px; flex-shrink: 0; padding-top: 40px; position: sticky; top: 70px; }
-        .config-heading { font-family: 'DM Serif Display', serif; font-size: 0.95rem; color: #c9c2ba; margin-bottom: 24px; }
+        .config-heading { font-family: 'DM Serif Display', serif; font-size: 0.95rem; color: var(--tx-2); margin-bottom: 24px; }
         .config-item { margin-bottom: 20px; }
-        .config-label { display: block; font-size: 0.7rem; color: #7a756f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .config-label { display: block; font-size: 0.7rem; color: var(--tx-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
         .config-row { display: flex; align-items: center; gap: 6px; }
-        input.cfg-num { width: 60px; padding: 7px 8px; background: #161616; border: 1px solid #2a2a2a; border-radius: 6px; color: #e8e4df; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; text-align: center; outline: none; transition: border-color 0.2s; -webkit-appearance: none; -moz-appearance: textfield; appearance: textfield; }
+        input.cfg-num { width: 60px; padding: 7px 8px; background: var(--surf); border: 1px solid var(--bd); border-radius: 6px; color: var(--tx); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; text-align: center; outline: none; transition: border-color 0.2s; -webkit-appearance: none; -moz-appearance: textfield; appearance: textfield; }
         input.cfg-num::-webkit-outer-spin-button, input.cfg-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input.cfg-num:focus { border-color: #4a4540; }
-        .config-x { color: #4a4540; font-size: 0.8rem; }
-        .config-unit { font-size: 0.75rem; color: #7a756f; margin-top: 4px; display: block; }
-        .config-total { font-size: 0.75rem; color: #c9c2ba; margin-top: 8px; line-height: 1.5; min-height: 1.2em; }
-        .config-toggle { padding: 4px 12px; background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; color: #7a756f; font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
-        .config-toggle:hover { border-color: #4a4540; color: #c9c2ba; transform: none; }
-        .config-toggle.on { border-color: #c9c2ba; color: #e8e4df; background: #1e1e1e; }
+        input.cfg-num:focus { border-color: var(--bd-h); }
+        .config-x { color: var(--tx-p); font-size: 0.8rem; }
+        .config-unit { font-size: 0.75rem; color: var(--tx-3); margin-top: 4px; display: block; }
+        .config-total { font-size: 0.75rem; color: var(--tx-2); margin-top: 8px; line-height: 1.5; min-height: 1.2em; }
+        .config-toggle { padding: 4px 12px; background: transparent; border: 1px solid var(--bd); border-radius: 20px; color: var(--tx-3); font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+        .config-toggle:hover { border-color: var(--bd-h); color: var(--tx-2); transform: none; }
+        .config-toggle.on { border-color: var(--tx-2); color: var(--tx); background: var(--surf-3); }
         .config-stepper { display: flex; align-items: center; }
-        .config-stepper-btn { width: 28px; height: 28px; background: #161616; border: 1px solid #2a2a2a; color: #7a756f; cursor: pointer; font-size: 1rem; padding: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .config-stepper-btn { width: 28px; height: 28px; background: var(--surf); border: 1px solid var(--bd); color: var(--tx-3); cursor: pointer; font-size: 1rem; padding: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
         .config-stepper-btn:first-child { border-radius: 6px 0 0 6px; }
         .config-stepper-btn:last-child { border-radius: 0 6px 6px 0; }
-        .config-stepper-btn:hover { background: #222; color: #c9c2ba; border-color: #4a4540; transform: none; }
-        .config-stepper-val { width: 32px; height: 28px; background: #161616; border-top: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; color: #e8e4df; font-size: 0.85rem; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .config-stepper-btn:hover { background: var(--surf-h); color: var(--tx-2); border-color: var(--bd-h); transform: none; }
+        .config-stepper-val { width: 32px; height: 28px; background: var(--surf); border-top: 1px solid var(--bd); border-bottom: 1px solid var(--bd); color: var(--tx); font-size: 0.85rem; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; }
         .container { flex: 1; min-width: 0; padding: 40px 0; }
-        h1 { font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -1px; margin-bottom: 6px; color: #f5f0eb; }
-        .subtitle { color: #7a756f; font-size: 0.95rem; margin-bottom: 48px; }
+        h1 { font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -1px; margin-bottom: 6px; color: var(--tx-b); }
+        .subtitle { color: var(--tx-3); font-size: 0.95rem; margin-bottom: 48px; }
         .section { display: none; }
         .section.active { display: block; }
-        .section-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; color: #c9c2ba; }
-        .section-desc { color: #7a756f; font-size: 0.85rem; margin-bottom: 20px; }
+        .section-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; color: var(--tx-2); }
+        .section-desc { color: var(--tx-3); font-size: 0.85rem; margin-bottom: 20px; }
         .input-group { display: flex; gap: 12px; margin-bottom: 40px; }
-        input[type="text"], input[type="number"] { padding: 14px 18px; background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; color: #e8e4df; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"], input[type="number"] { padding: 14px 18px; background: var(--surf); border: 1px solid var(--bd); border-radius: 8px; color: var(--tx); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
         input[type="text"] { flex: 1; }
-        input[type="text"]:focus, input[type="number"]:focus { border-color: #4a4540; }
-        input[type="text"]::placeholder, input[type="number"]::placeholder { color: #4a4540; }
-        button { padding: 14px 28px; background: #e8e4df; color: #0a0a0a; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-        button:hover { background: #f5f0eb; transform: translateY(-1px); }
+        input[type="text"]:focus, input[type="number"]:focus { border-color: var(--bd-h); }
+        input[type="text"]::placeholder, input[type="number"]::placeholder { color: var(--tx-p); }
+        button { padding: 14px 28px; background: var(--btn); color: var(--btn-tx); border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        button:hover { background: var(--btn-h); transform: translateY(-1px); }
         button:active { transform: translateY(0); }
         button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
         .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
@@ -61,97 +80,94 @@
         .color-name { font-family: 'DM Serif Display', serif; font-size: 0.85rem; }
         .color-card .color-ratio, .color-card .color-hex, .color-card .color-name { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         .download-wrapper { text-align: center; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
-        .download-btn { padding: 8px 16px; background: #1a1a1a; color: #7a756f; border: 1px solid #333; border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer; }
-        .download-btn:hover { background: #222; color: #c9c2ba; border-color: #4a4540; }
+        .download-btn { padding: 8px 16px; background: var(--surf-2); color: var(--tx-3); border: 1px solid var(--bd-m); border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer; }
+        .download-btn:hover { background: var(--surf-h); color: var(--tx-2); border-color: var(--bd-h); }
         .variation-wrapper { text-align: center; margin-bottom: 12px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.05s; }
-        .save-btn { padding: 10px 24px; background: transparent; color: #7a756f; border: 1px solid #2a2a2a; border-radius: 8px; font-size: 0.8rem; font-weight: 500; }
-        .save-btn:hover { background: #161616; color: #c9c2ba; border-color: #4a4540; }
-        .canvas-input-section { background: #161616; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.28s; }
+        .save-btn { padding: 10px 24px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 0.8rem; font-weight: 500; }
+        .save-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
+        .canvas-input-section { background: var(--surf); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.28s; }
         .canvas-input-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .canvas-input-label { font-size: 0.85rem; color: #c9c2ba; font-weight: 500; }
+        .canvas-input-label { font-size: 0.85rem; color: var(--tx-2); font-weight: 500; }
         .canvas-input-row input[type="number"] { width: 70px; padding: 8px 12px; font-size: 0.85rem; text-align: center; }
-        .canvas-input-x { color: #7a756f; font-size: 0.85rem; }
-        .canvas-input-unit { color: #7a756f; font-size: 0.8rem; }
-        .canvas-total { margin-left: auto; font-size: 0.8rem; color: #7a756f; }
-        .canvas-total-amount { color: #c9c2ba; font-weight: 500; }
-        .recipe-section { background: #161616; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
-        .recipe-heading { font-family: 'DM Serif Display', serif; font-size: 1rem; color: #c9c2ba; margin-bottom: 16px; }
-        .recipe-row { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid #222; align-items: flex-start; }
+        .canvas-input-x { color: var(--tx-3); font-size: 0.85rem; }
+        .canvas-input-unit { color: var(--tx-3); font-size: 0.8rem; }
+        .canvas-total { margin-left: auto; font-size: 0.8rem; color: var(--tx-3); }
+        .canvas-total-amount { color: var(--tx-2); font-weight: 500; }
+        .recipe-section { background: var(--surf); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .recipe-heading { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--tx-2); margin-bottom: 16px; }
+        .recipe-row { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--bd-f); align-items: flex-start; }
         .recipe-row:last-child { border-bottom: none; }
         .recipe-swatch { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; margin-top: 2px; }
         .recipe-color-info { width: 110px; flex-shrink: 0; }
-        .recipe-color-name { font-size: 0.8rem; color: #f5f0eb; font-weight: 500; margin-bottom: 2px; }
-        .recipe-color-hex { font-size: 0.75rem; color: #7a756f; margin-bottom: 2px; }
-        .recipe-color-needed { font-size: 0.75rem; color: #c9c2ba; font-weight: 500; }
+        .recipe-color-name { font-size: 0.8rem; color: var(--tx-b); font-weight: 500; margin-bottom: 2px; }
+        .recipe-color-hex { font-size: 0.75rem; color: var(--tx-3); margin-bottom: 2px; }
+        .recipe-color-needed { font-size: 0.75rem; color: var(--tx-2); font-weight: 500; }
         .recipe-ingredients { flex: 1; }
         .recipe-ingredient { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
         .recipe-tube-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
-        .recipe-tube { font-size: 0.8rem; color: #c9c2ba; flex: 1; }
-        .recipe-grams { font-size: 0.8rem; color: #7a756f; font-weight: 500; white-space: nowrap; margin-left: 12px; }
-        .recipe-total { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; margin-top: 4px; border-top: 1px solid #2a2a2a; }
-        .recipe-total-label { font-size: 0.75rem; color: #7a756f; }
-        .recipe-total-grams { font-size: 0.75rem; color: #7a756f; font-weight: 500; }
-        .recipe-grand-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 4px; margin-top: 8px; border-top: 1px solid #333; font-size: 0.85rem; color: #c9c2ba; font-weight: 500; }
-        .recipe-disclaimer { font-size: 0.75rem; font-style: italic; color: #7a756f; margin-top: 14px; line-height: 1.5; }
-        .prompt-label { text-align: center; color: #7a756f; font-size: 0.8rem; font-style: italic; margin-bottom: 12px; }
-        .technique-card { background: #161616; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
-        .technique-name { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: #f5f0eb; margin-bottom: 8px; }
-        .technique-reason { font-size: 0.85rem; color: #c9c2ba; line-height: 1.5; margin-bottom: 12px; }
-        .technique-tip { font-size: 0.8rem; color: #7a756f; line-height: 1.5; padding-left: 12px; border-left: 2px solid #2a2a2a; }
+        .recipe-tube { font-size: 0.8rem; color: var(--tx-2); flex: 1; }
+        .recipe-grams { font-size: 0.8rem; color: var(--tx-3); font-weight: 500; white-space: nowrap; margin-left: 12px; }
+        .recipe-total { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; margin-top: 4px; border-top: 1px solid var(--bd); }
+        .recipe-total-label { font-size: 0.75rem; color: var(--tx-3); }
+        .recipe-total-grams { font-size: 0.75rem; color: var(--tx-3); font-weight: 500; }
+        .recipe-grand-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 4px; margin-top: 8px; border-top: 1px solid var(--bd-m); font-size: 0.85rem; color: var(--tx-2); font-weight: 500; }
+        .recipe-disclaimer { font-size: 0.75rem; font-style: italic; color: var(--tx-3); margin-top: 14px; line-height: 1.5; }
+        .prompt-label { text-align: center; color: var(--tx-3); font-size: 0.8rem; font-style: italic; margin-bottom: 12px; }
+        .technique-card { background: var(--surf); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .technique-name { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--tx-b); margin-bottom: 8px; }
+        .technique-reason { font-size: 0.85rem; color: var(--tx-2); line-height: 1.5; margin-bottom: 12px; }
+        .technique-tip { font-size: 0.8rem; color: var(--tx-3); line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--bd); }
         .divider { display: none; }
         .mix-inputs { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
         .color-input-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; }
-        input[type="color"] { width: 40px; height: 40px; border: 1px solid #2a2a2a; border-radius: 6px; background: #161616; cursor: pointer; padding: 2px; }
+        input[type="color"] { width: 40px; height: 40px; border: 1px solid var(--bd); border-radius: 6px; background: var(--surf); cursor: pointer; padding: 2px; }
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
         input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
-        .mix-plus { color: #7a756f; font-size: 1.2rem; }
-        .mix-shuffle-btn { padding: 10px 14px; background: transparent; color: #7a756f; border: 1px solid #2a2a2a; border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; }
-        .mix-shuffle-btn:hover { background: #161616; color: #c9c2ba; border-color: #4a4540; transform: none; }
+        .mix-plus { color: var(--tx-3); font-size: 1.2rem; }
+        .mix-shuffle-btn { padding: 10px 14px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; }
+        .mix-shuffle-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); transform: none; }
         .mix-result { display: none; border-radius: 12px; overflow: hidden; animation: fadeIn 0.4s ease forwards; }
         .mix-result.active { display: block; }
         .mix-result-header { display: flex; align-items: stretch; min-height: 120px; }
         .mix-color-preview { width: 120px; min-height: 120px; flex-shrink: 0; }
-        .mix-info { padding: 20px 24px; background: #161616; flex: 1; }
-        .mix-result-name { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 4px; color: #f5f0eb; }
-        .mix-result-hex { font-size: 0.8rem; color: #7a756f; margin-bottom: 12px; }
-        .mix-result-desc { font-size: 0.85rem; color: #c9c2ba; line-height: 1.5; margin-bottom: 12px; }
-        .mix-result-tip { font-size: 0.8rem; color: #7a756f; line-height: 1.5; padding-left: 12px; border-left: 2px solid #2a2a2a; }
-
+        .mix-info { padding: 20px 24px; background: var(--surf); flex: 1; }
+        .mix-result-name { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 4px; color: var(--tx-b); }
+        .mix-result-hex { font-size: 0.8rem; color: var(--tx-3); margin-bottom: 12px; }
+        .mix-result-desc { font-size: 0.85rem; color: var(--tx-2); line-height: 1.5; margin-bottom: 12px; }
+        .mix-result-tip { font-size: 0.8rem; color: var(--tx-3); line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--bd); }
         .shelf-search { margin-bottom: 16px; }
         .shelf-search input { width: 100%; }
         .shelf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
-        .shelf-chip { width: 36px; height: 36px; border-radius: 7px; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; flex-shrink: 0; }
+        .shelf-chip { width: 36px; height: 36px; border-radius: 7px; border: 1.5px solid rgba(0,0,0,0.18); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; flex-shrink: 0; }
         .shelf-chip:hover { transform: scale(1.15); z-index: 10; }
-        .shelf-chip.selected { box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #e8e4df; }
+        .shelf-chip.selected { box-shadow: 0 0 0 2px var(--chip-in), 0 0 0 4px var(--chip-out); }
         .shelf-chip.hidden { display: none; }
-
-        #shelfTooltip { display: none; position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; white-space: nowrap; z-index: 9999; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        #shelfTooltip .tt-name { font-size: 0.8rem; color: #f5f0eb; font-weight: 500; margin-bottom: 3px; }
-        #shelfTooltip .tt-code { font-size: 0.75rem; color: #c9c2ba; margin-bottom: 2px; }
-        #shelfTooltip .tt-hex { font-size: 0.75rem; color: #7a756f; font-family: monospace; }
-
-        .shelf-selected-count { font-size: 0.8rem; color: #7a756f; margin-bottom: 12px; }
+        #shelfTooltip { display: none; position: fixed; background: var(--surf-2); border: 1px solid var(--bd-m); border-radius: 8px; padding: 10px 14px; white-space: nowrap; z-index: 9999; pointer-events: none; box-shadow: 0 4px 20px var(--shad); }
+        #shelfTooltip .tt-name { font-size: 0.8rem; color: var(--tx-b); font-weight: 500; margin-bottom: 3px; }
+        #shelfTooltip .tt-code { font-size: 0.75rem; color: var(--tx-2); margin-bottom: 2px; }
+        #shelfTooltip .tt-hex { font-size: 0.75rem; color: var(--tx-3); font-family: monospace; }
+        .shelf-selected-count { font-size: 0.8rem; color: var(--tx-3); margin-bottom: 12px; }
         .base-picker-row { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-        .base-picker-label { font-size: 0.7rem; color: #7a756f; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-        .base-option { padding: 4px 10px; background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; color: #7a756f; font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
-        .base-option:hover { border-color: #4a4540; color: #c9c2ba; transform: none; }
-        .base-option.active { border-color: #c9c2ba; color: #e8e4df; background: #1e1e1e; }
+        .base-picker-label { font-size: 0.7rem; color: var(--tx-3); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        .base-option { padding: 4px 10px; background: transparent; border: 1px solid var(--bd); border-radius: 20px; color: var(--tx-3); font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+        .base-option:hover { border-color: var(--bd-h); color: var(--tx-2); transform: none; }
+        .base-option.active { border-color: var(--tx-2); color: var(--tx); background: var(--surf-3); }
         .base-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .suggest-card { background: #161616; border: 1px solid #2a2a2a; border-radius: 12px; padding: 0; margin-bottom: 16px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
-        .suggest-card:hover { border-color: #4a4540; }
+        .suggest-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 0; margin-bottom: 16px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
+        .suggest-card:hover { border-color: var(--bd-h); }
         .suggest-card-swatches { display: flex; height: 60px; }
         .suggest-card-swatch { flex: 1; position: relative; }
         .suggest-card-swatch.is-base::after { content: 'FLOOD'; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 0.45rem; font-weight: 700; letter-spacing: 0.8px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
         .suggest-card-body { padding: 16px 20px; }
         .color-base-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.65; margin-bottom: 4px; }
-        .suggest-card-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #f5f0eb; margin-bottom: 4px; }
-        .suggest-card-mood { font-size: 0.8rem; color: #7a756f; line-height: 1.4; }
-        .loading { text-align: center; color: #7a756f; padding: 40px; font-size: 0.9rem; }
+        .suggest-card-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); margin-bottom: 4px; }
+        .suggest-card-mood { font-size: 0.8rem; color: var(--tx-3); line-height: 1.4; }
+        .loading { text-align: center; color: var(--tx-3); padding: 40px; font-size: 0.9rem; }
         .loading-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
         @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
-        .error { text-align: center; color: #a05050; padding: 20px; font-size: 0.85rem; }
-        .footer { text-align: center; color: #7a756f; font-size: 0.75rem; margin-top: 64px; padding-top: 24px; border-top: 1px solid #1a1a1a; }
-        .footer a { color: #7a756f; text-decoration: none; }
+        .error { text-align: center; color: var(--err); padding: 20px; font-size: 0.85rem; }
+        .footer { text-align: center; color: var(--tx-3); font-size: 0.75rem; margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--bd-s); }
+        .footer a { color: var(--tx-3); text-decoration: none; }
         @media (max-width: 768px) {
             .page-wrapper { flex-direction: column; padding: 0 16px; }
             .config-panel { width: 100%; position: static; padding-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
@@ -174,6 +190,7 @@
         <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
         <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
         <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
+        <button class="nav-btn theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
     </div></nav>
     <div class="page-wrapper">
     <aside class="config-panel">
@@ -238,6 +255,16 @@
     </div></div>
     <script>
     let lastPalette = null;
+
+    function toggleTheme() {
+        const light = document.body.classList.toggle('light');
+        document.getElementById('themeToggle').textContent = light ? '☾' : '☀';
+        localStorage.setItem('theme', light ? 'light' : 'dark');
+    }
+    if (localStorage.getItem('theme') === 'light') {
+        document.body.classList.add('light');
+        document.getElementById('themeToggle').textContent = '☾';
+    }
 
     const moods = ['Peaceful','Dramatic','Dreamy','Vibrant','Melancholic','Fiery','Serene','Moody','Ethereal','Bold','Warm','Icy','Nostalgic','Electric','Soft'];
     const scenes = ['sunset over the ocean','forest after rain','mountain lake at dawn','desert canyon','lavender field','coral reef','northern lights','cherry blossom garden','thunderstorm clouds','autumn vineyard','tropical jungle','frozen waterfall','wildflower meadow','volcanic landscape','moonlit beach','misty valley','bamboo forest','Mediterranean coast','tulip field at sunrise','deep cave crystals','prairie at golden hour','mangrove swamp'];
