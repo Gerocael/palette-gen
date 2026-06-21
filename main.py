@@ -1,32 +1,62 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from palette_service import generate_palette, mix_colors
-from datetime import datetime, date
+from palette_service import generate_palette, mix_colors, suggest_from_shelf
+from datetime import datetime, date, timezone
 
 app = FastAPI()
 
-# Simple daily rate limit: 1 generate + 1 mix per IP per day
 usage_log = {}
+palette_history = []
 
 def check_rate_limit(ip: str, action: str):
     today = date.today().isoformat()
     key = f"{ip}:{action}:{today}"
-    if key in usage_log:
+    count = usage_log.get(key, 0)
+    if count >= 5:
         raise HTTPException(status_code=429, detail="Daily limit reached. Come back tomorrow!")
-    usage_log[key] = True
+    usage_log[key] = count + 1
 
 class PaletteRequest(BaseModel):
     prompt: str
+    num_colors: int = 5
+
+class MixIngredient(BaseModel):
+    tube: str
+    tube_hex: str
+    grams: float
 
 class Color(BaseModel):
     hex_code: str
     name: str
     description: str
+    pour_ratio: int | None = None
+    mix_recipe: list[MixIngredient] | None = None
+    role: str | None = None
+
+class Technique(BaseModel):
+    name: str
+    reason: str
+    tip: str
 
 class PaletteResponse(BaseModel):
     prompt: str
     colors: list[Color]
+    technique: Technique | None = None
+
+class ShelfRequest(BaseModel):
+    tubes: list[str]
+    base_tube: str | None = None
+    flood_mode: bool = False
+
+class SuggestedPalette(BaseModel):
+    name: str
+    mood: str
+    colors: list[Color]
+    technique: Technique | None = None
+
+class SuggestResponse(BaseModel):
+    palettes: list[SuggestedPalette]
 
 class MixRequest(BaseModel):
     color1: str
@@ -40,45 +70,123 @@ class MixResponse(BaseModel):
     description: str
     pour_tip: str
 
+
+def build_colors(raw_colors):
+    colors = []
+    for c in raw_colors:
+        mix_recipe = None
+        raw_recipe = c.get("mixRecipe") or c.get("mix_recipe") or []
+        if raw_recipe:
+            ingredients = []
+            for ing in raw_recipe:
+                if isinstance(ing, str):
+                    continue
+                tube = ing.get("tube") or ing.get("name") or ""
+                tube_hex = ing.get("tubeHex") or ing.get("tube_hex") or "#888888"
+                grams = ing.get("grams") or ing.get("amount") or 0
+                try:
+                    grams = float(grams)
+                except (ValueError, TypeError):
+                    grams = 0
+                if tube and tube != "Unknown" and grams > 0:
+                    ingredients.append(MixIngredient(tube=tube, tube_hex=tube_hex, grams=grams))
+            if ingredients:
+                mix_recipe = ingredients
+
+        hex_code = c.get("hexCode") or c.get("hex_code") or "#888888"
+        name = c.get("colorName") or c.get("color_name") or c.get("name") or "Unknown"
+        description = c.get("emotionalDescription") or c.get("emotional_description") or c.get("description") or ""
+        pour_ratio = c.get("pourRatio") or c.get("pour_ratio")
+        if pour_ratio is not None:
+            try:
+                pour_ratio = int(pour_ratio)
+            except (ValueError, TypeError):
+                pour_ratio = None
+
+        role = c.get("role")
+
+        colors.append(Color(
+            hex_code=hex_code,
+            name=name,
+            description=description,
+            pour_ratio=pour_ratio,
+            mix_recipe=mix_recipe,
+            role=role
+        ))
+    return colors
+
+
+def build_technique(raw_technique):
+    if raw_technique and isinstance(raw_technique, dict):
+        return Technique(
+            name=raw_technique.get("name", ""),
+            reason=raw_technique.get("reason", ""),
+            tip=raw_technique.get("tip", "")
+        )
+    return None
+
+
+@app.get("/palette/history")
+def get_history():
+    return {"history": list(reversed(palette_history))}
+
 @app.post("/palette/generate")
 def create_palette(request: PaletteRequest, req: Request):
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
-    
     check_rate_limit(req.client.host, "generate")
-    
     try:
-        raw_colors = generate_palette(request.prompt)
-        colors = [
-            Color(
-                hex_code=c["hexCode"],
-                name=c["colorName"],
-                description=c["emotionalDescription"]
-            )
-            for c in raw_colors
-        ]
-        return PaletteResponse(prompt=request.prompt, colors=colors)
+        result = generate_palette(request.prompt, num_colors=max(3, min(5, request.num_colors)))
+        colors = build_colors(result["colors"])
+        technique = build_technique(result.get("technique"))
+        response = PaletteResponse(prompt=request.prompt, colors=colors, technique=technique)
+        palette_history.append({
+            "prompt": request.prompt,
+            "palette": [c.model_dump() for c in colors],
+            "technique": technique.model_dump() if technique else None,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        palette_history[:] = palette_history[-5:]
+        return response
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate palette: {str(e)}")
 
+@app.post("/palette/suggest")
+def suggest_palettes(request: ShelfRequest, req: Request):
+    if not request.tubes or len(request.tubes) < 2:
+        raise HTTPException(status_code=400, detail="Please add at least 2 tubes to your shelf")
+    check_rate_limit(req.client.host, "suggest")
+    try:
+        result = suggest_from_shelf(request.tubes, base_tube=request.base_tube, flood_mode=request.flood_mode)
+        palettes = []
+        for p in result.get("palettes", []):
+            colors = build_colors(p.get("colors", []))
+            technique = build_technique(p.get("technique"))
+            palettes.append(SuggestedPalette(
+                name=p.get("name", "Untitled"),
+                mood=p.get("mood", ""),
+                colors=colors,
+                technique=technique
+            ))
+        return SuggestResponse(palettes=palettes)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to suggest palettes: {str(e)}")
+
 @app.post("/palette/mix")
 def mix_palette_colors(request: MixRequest, req: Request):
     if not request.color1.strip() or not request.color2.strip():
         raise HTTPException(status_code=400, detail="Both colors are required")
-    
     check_rate_limit(req.client.host, "mix")
-    
     try:
         result = mix_colors(request.color1, request.color2)
         return MixResponse(
-            color1=request.color1,
-            color2=request.color2,
-            result_hex=result["resultHex"],
-            result_name=result["resultName"],
-            description=result["description"],
-            pour_tip=result["pourTip"]
+            color1=request.color1, color2=request.color2,
+            result_hex=result["resultHex"], result_name=result["resultName"],
+            description=result["description"], pour_tip=result["pourTip"]
         )
     except HTTPException:
         raise

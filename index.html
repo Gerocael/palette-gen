@@ -6,494 +6,668 @@
     <title>Palette Gen</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #0a0a0a; color: #e8e4df; min-height: 100vh; }
+        .nav { position: sticky; top: 0; z-index: 100; background: rgba(10,10,10,0.92); backdrop-filter: blur(10px); border-bottom: 1px solid #1a1a1a; padding: 14px 24px; }
+        .nav-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 16px; }
+        .nav-brand { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #f5f0eb; margin-right: auto; }
+        .nav-btn { padding: 8px 16px; background: transparent; color: #7a756f; border: 1px solid #2a2a2a; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .nav-btn:hover { background: #161616; color: #c9c2ba; border-color: #4a4540; }
+        .nav-btn.active { background: #e8e4df; color: #0a0a0a; border-color: #e8e4df; }
+        .page-wrapper { display: flex; gap: 40px; max-width: 960px; margin: 0 auto; padding: 0 24px; align-items: flex-start; }
+        .config-panel { width: 172px; flex-shrink: 0; padding-top: 40px; position: sticky; top: 70px; }
+        .config-heading { font-family: 'DM Serif Display', serif; font-size: 0.95rem; color: #c9c2ba; margin-bottom: 24px; }
+        .config-item { margin-bottom: 20px; }
+        .config-label { display: block; font-size: 0.7rem; color: #7a756f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .config-row { display: flex; align-items: center; gap: 6px; }
+        input.cfg-num { width: 60px; padding: 7px 8px; background: #161616; border: 1px solid #2a2a2a; border-radius: 6px; color: #e8e4df; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; text-align: center; outline: none; transition: border-color 0.2s; -webkit-appearance: none; -moz-appearance: textfield; appearance: textfield; }
+        input.cfg-num::-webkit-outer-spin-button, input.cfg-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input.cfg-num:focus { border-color: #4a4540; }
+        .config-x { color: #4a4540; font-size: 0.8rem; }
+        .config-unit { font-size: 0.75rem; color: #7a756f; margin-top: 4px; display: block; }
+        .config-total { font-size: 0.75rem; color: #c9c2ba; margin-top: 8px; line-height: 1.5; min-height: 1.2em; }
+        .config-toggle { padding: 4px 12px; background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; color: #7a756f; font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+        .config-toggle:hover { border-color: #4a4540; color: #c9c2ba; transform: none; }
+        .config-toggle.on { border-color: #c9c2ba; color: #e8e4df; background: #1e1e1e; }
+        .config-stepper { display: flex; align-items: center; }
+        .config-stepper-btn { width: 28px; height: 28px; background: #161616; border: 1px solid #2a2a2a; color: #7a756f; cursor: pointer; font-size: 1rem; padding: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .config-stepper-btn:first-child { border-radius: 6px 0 0 6px; }
+        .config-stepper-btn:last-child { border-radius: 0 6px 6px 0; }
+        .config-stepper-btn:hover { background: #222; color: #c9c2ba; border-color: #4a4540; transform: none; }
+        .config-stepper-val { width: 32px; height: 28px; background: #161616; border-top: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; color: #e8e4df; font-size: 0.85rem; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .container { flex: 1; min-width: 0; padding: 40px 0; }
+        h1 { font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -1px; margin-bottom: 6px; color: #f5f0eb; }
+        .subtitle { color: #7a756f; font-size: 0.95rem; margin-bottom: 48px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .section-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; color: #c9c2ba; }
+        .section-desc { color: #7a756f; font-size: 0.85rem; margin-bottom: 20px; }
+        .input-group { display: flex; gap: 12px; margin-bottom: 40px; }
+        input[type="text"], input[type="number"] { padding: 14px 18px; background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; color: #e8e4df; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"] { flex: 1; }
+        input[type="text"]:focus, input[type="number"]:focus { border-color: #4a4540; }
+        input[type="text"]::placeholder, input[type="number"]::placeholder { color: #4a4540; }
+        button { padding: 14px 28px; background: #e8e4df; color: #0a0a0a; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        button:hover { background: #f5f0eb; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
+        .palette-grid.active { min-height: 200px; }
+        .color-card { display: flex; flex-direction: column; justify-content: flex-end; padding: 16px 12px; min-height: 200px; position: relative; opacity: 0; animation: fadeIn 0.4s ease forwards; }
+        .color-card:nth-child(1) { animation-delay: 0.05s; } .color-card:nth-child(2) { animation-delay: 0.1s; } .color-card:nth-child(3) { animation-delay: 0.15s; } .color-card:nth-child(4) { animation-delay: 0.2s; } .color-card:nth-child(5) { animation-delay: 0.25s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .color-ratio { position: absolute; top: 12px; left: 12px; font-size: 0.85rem; font-weight: 500; opacity: 0.5; }
+        .color-hex { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.5px; opacity: 0.85; margin-bottom: 4px; }
+        .color-name { font-family: 'DM Serif Display', serif; font-size: 0.85rem; }
+        .color-card .color-ratio, .color-card .color-hex, .color-card .color-name { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        .download-wrapper { text-align: center; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .download-btn { padding: 8px 16px; background: #1a1a1a; color: #7a756f; border: 1px solid #333; border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer; }
+        .download-btn:hover { background: #222; color: #c9c2ba; border-color: #4a4540; }
+        .variation-wrapper { text-align: center; margin-bottom: 12px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.05s; }
+        .save-btn { padding: 10px 24px; background: transparent; color: #7a756f; border: 1px solid #2a2a2a; border-radius: 8px; font-size: 0.8rem; font-weight: 500; }
+        .save-btn:hover { background: #161616; color: #c9c2ba; border-color: #4a4540; }
+        .canvas-input-section { background: #161616; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.28s; }
+        .canvas-input-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .canvas-input-label { font-size: 0.85rem; color: #c9c2ba; font-weight: 500; }
+        .canvas-input-row input[type="number"] { width: 70px; padding: 8px 12px; font-size: 0.85rem; text-align: center; }
+        .canvas-input-x { color: #7a756f; font-size: 0.85rem; }
+        .canvas-input-unit { color: #7a756f; font-size: 0.8rem; }
+        .canvas-total { margin-left: auto; font-size: 0.8rem; color: #7a756f; }
+        .canvas-total-amount { color: #c9c2ba; font-weight: 500; }
+        .recipe-section { background: #161616; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .recipe-heading { font-family: 'DM Serif Display', serif; font-size: 1rem; color: #c9c2ba; margin-bottom: 16px; }
+        .recipe-row { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid #222; align-items: flex-start; }
+        .recipe-row:last-child { border-bottom: none; }
+        .recipe-swatch { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; margin-top: 2px; }
+        .recipe-color-info { width: 110px; flex-shrink: 0; }
+        .recipe-color-name { font-size: 0.8rem; color: #f5f0eb; font-weight: 500; margin-bottom: 2px; }
+        .recipe-color-hex { font-size: 0.75rem; color: #7a756f; margin-bottom: 2px; }
+        .recipe-color-needed { font-size: 0.75rem; color: #c9c2ba; font-weight: 500; }
+        .recipe-ingredients { flex: 1; }
+        .recipe-ingredient { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+        .recipe-tube-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+        .recipe-tube { font-size: 0.8rem; color: #c9c2ba; flex: 1; }
+        .recipe-grams { font-size: 0.8rem; color: #7a756f; font-weight: 500; white-space: nowrap; margin-left: 12px; }
+        .recipe-total { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; margin-top: 4px; border-top: 1px solid #2a2a2a; }
+        .recipe-total-label { font-size: 0.75rem; color: #7a756f; }
+        .recipe-total-grams { font-size: 0.75rem; color: #7a756f; font-weight: 500; }
+        .recipe-grand-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 4px; margin-top: 8px; border-top: 1px solid #333; font-size: 0.85rem; color: #c9c2ba; font-weight: 500; }
+        .recipe-disclaimer { font-size: 0.75rem; font-style: italic; color: #7a756f; margin-top: 14px; line-height: 1.5; }
+        .prompt-label { text-align: center; color: #7a756f; font-size: 0.8rem; font-style: italic; margin-bottom: 12px; }
+        .technique-card { background: #161616; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .technique-name { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: #f5f0eb; margin-bottom: 8px; }
+        .technique-reason { font-size: 0.85rem; color: #c9c2ba; line-height: 1.5; margin-bottom: 12px; }
+        .technique-tip { font-size: 0.8rem; color: #7a756f; line-height: 1.5; padding-left: 12px; border-left: 2px solid #2a2a2a; }
+        .divider { display: none; }
+        .mix-inputs { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
+        .color-input-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; }
+        input[type="color"] { width: 40px; height: 40px; border: 1px solid #2a2a2a; border-radius: 6px; background: #161616; cursor: pointer; padding: 2px; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+        .mix-plus { color: #7a756f; font-size: 1.2rem; }
+        .mix-shuffle-btn { padding: 10px 14px; background: transparent; color: #7a756f; border: 1px solid #2a2a2a; border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; }
+        .mix-shuffle-btn:hover { background: #161616; color: #c9c2ba; border-color: #4a4540; transform: none; }
+        .mix-result { display: none; border-radius: 12px; overflow: hidden; animation: fadeIn 0.4s ease forwards; }
+        .mix-result.active { display: block; }
+        .mix-result-header { display: flex; align-items: stretch; min-height: 120px; }
+        .mix-color-preview { width: 120px; min-height: 120px; flex-shrink: 0; }
+        .mix-info { padding: 20px 24px; background: #161616; flex: 1; }
+        .mix-result-name { font-family: 'DM Serif Display', serif; font-size: 1.2rem; margin-bottom: 4px; color: #f5f0eb; }
+        .mix-result-hex { font-size: 0.8rem; color: #7a756f; margin-bottom: 12px; }
+        .mix-result-desc { font-size: 0.85rem; color: #c9c2ba; line-height: 1.5; margin-bottom: 12px; }
+        .mix-result-tip { font-size: 0.8rem; color: #7a756f; line-height: 1.5; padding-left: 12px; border-left: 2px solid #2a2a2a; }
+
+        .shelf-search { margin-bottom: 16px; }
+        .shelf-search input { width: 100%; }
+        .shelf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+        .shelf-chip { width: 36px; height: 36px; border-radius: 7px; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; flex-shrink: 0; }
+        .shelf-chip:hover { transform: scale(1.15); z-index: 10; }
+        .shelf-chip.selected { box-shadow: 0 0 0 2px #0a0a0a, 0 0 0 4px #e8e4df; }
+        .shelf-chip.hidden { display: none; }
+
+        #shelfTooltip { display: none; position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 10px 14px; white-space: nowrap; z-index: 9999; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        #shelfTooltip .tt-name { font-size: 0.8rem; color: #f5f0eb; font-weight: 500; margin-bottom: 3px; }
+        #shelfTooltip .tt-code { font-size: 0.75rem; color: #c9c2ba; margin-bottom: 2px; }
+        #shelfTooltip .tt-hex { font-size: 0.75rem; color: #7a756f; font-family: monospace; }
+
+        .shelf-selected-count { font-size: 0.8rem; color: #7a756f; margin-bottom: 12px; }
+        .base-picker-row { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .base-picker-label { font-size: 0.7rem; color: #7a756f; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        .base-option { padding: 4px 10px; background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; color: #7a756f; font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+        .base-option:hover { border-color: #4a4540; color: #c9c2ba; transform: none; }
+        .base-option.active { border-color: #c9c2ba; color: #e8e4df; background: #1e1e1e; }
+        .base-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .suggest-card { background: #161616; border: 1px solid #2a2a2a; border-radius: 12px; padding: 0; margin-bottom: 16px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
+        .suggest-card:hover { border-color: #4a4540; }
+        .suggest-card-swatches { display: flex; height: 60px; }
+        .suggest-card-swatch { flex: 1; position: relative; }
+        .suggest-card-swatch.is-base::after { content: 'FLOOD'; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 0.45rem; font-weight: 700; letter-spacing: 0.8px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+        .suggest-card-body { padding: 16px 20px; }
+        .color-base-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.65; margin-bottom: 4px; }
+        .suggest-card-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #f5f0eb; margin-bottom: 4px; }
+        .suggest-card-mood { font-size: 0.8rem; color: #7a756f; line-height: 1.4; }
+        .loading { text-align: center; color: #7a756f; padding: 40px; font-size: 0.9rem; }
+        .loading-dots::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+        @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+        .error { text-align: center; color: #a05050; padding: 20px; font-size: 0.85rem; }
+        .footer { text-align: center; color: #7a756f; font-size: 0.75rem; margin-top: 64px; padding-top: 24px; border-top: 1px solid #1a1a1a; }
+        .footer a { color: #7a756f; text-decoration: none; }
+        @media (max-width: 768px) {
+            .page-wrapper { flex-direction: column; padding: 0 16px; }
+            .config-panel { width: 100%; position: static; padding-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+            .config-heading { display: none; }
+            .config-item { margin-bottom: 0; }
         }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: #0a0a0a;
-            color: #e8e4df;
-            min-height: 100vh;
-            padding: 40px 24px;
-        }
-
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            font-family: 'DM Serif Display', serif;
-            font-size: 3rem;
-            letter-spacing: -1px;
-            margin-bottom: 6px;
-            color: #f5f0eb;
-        }
-
-        .subtitle {
-            color: #7a756f;
-            font-size: 0.95rem;
-            margin-bottom: 48px;
-        }
-
-        .section-title {
-            font-family: 'DM Serif Display', serif;
-            font-size: 1.4rem;
-            margin-bottom: 20px;
-            color: #c9c2ba;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 40px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 14px 18px;
-            background: #161616;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: #e8e4df;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input[type="text"]:focus {
-            border-color: #4a4540;
-        }
-
-        input[type="text"]::placeholder {
-            color: #4a4540;
-        }
-
-        button {
-            padding: 14px 28px;
-            background: #e8e4df;
-            color: #0a0a0a;
-            border: none;
-            border-radius: 8px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-
-        button:hover {
-            background: #f5f0eb;
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .palette-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 0;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 16px;
-            min-height: 0;
-            transition: min-height 0.3s;
-        }
-
-        .palette-grid.active {
-            min-height: 200px;
-        }
-
-        .color-card {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 16px 12px;
-            min-height: 200px;
-            position: relative;
-            opacity: 0;
-            animation: fadeIn 0.4s ease forwards;
-        }
-
-        .color-card:nth-child(1) { animation-delay: 0.05s; }
-        .color-card:nth-child(2) { animation-delay: 0.1s; }
-        .color-card:nth-child(3) { animation-delay: 0.15s; }
-        .color-card:nth-child(4) { animation-delay: 0.2s; }
-        .color-card:nth-child(5) { animation-delay: 0.25s; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .color-hex {
-            font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            opacity: 0.85;
-            margin-bottom: 4px;
-        }
-
-        .color-name {
-            font-family: 'DM Serif Display', serif;
-            font-size: 0.85rem;
-            margin-bottom: 6px;
-        }
-
-        .color-desc {
-            font-size: 0.7rem;
-            opacity: 0.7;
-            line-height: 1.4;
-        }
-
-        .color-card .color-hex,
-        .color-card .color-name,
-        .color-card .color-desc {
-            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        }
-
-        .prompt-label {
-            text-align: center;
-            color: #4a4540;
-            font-size: 0.8rem;
-            font-style: italic;
-            margin-bottom: 48px;
-        }
-
-        .divider {
-            height: 1px;
-            background: #1e1e1e;
-            margin: 48px 0;
-        }
-
-        .mix-section {
-            margin-bottom: 48px;
-        }
-
-        .mix-inputs {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-
-        .color-input-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-
-        input[type="color"] {
-            width: 40px;
-            height: 40px;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            background: #161616;
-            cursor: pointer;
-            padding: 2px;
-        }
-
-        input[type="color"]::-webkit-color-swatch-wrapper {
-            padding: 2px;
-        }
-
-        input[type="color"]::-webkit-color-swatch {
-            border: none;
-            border-radius: 3px;
-        }
-
-        .mix-plus {
-            color: #4a4540;
-            font-size: 1.2rem;
-        }
-
-        .mix-result {
-            display: none;
-            border-radius: 12px;
-            overflow: hidden;
-            animation: fadeIn 0.4s ease forwards;
-        }
-
-        .mix-result.active {
-            display: block;
-        }
-
-        .mix-result-header {
-            display: flex;
-            align-items: stretch;
-            min-height: 120px;
-        }
-
-        .mix-color-preview {
-            width: 120px;
-            min-height: 120px;
-            flex-shrink: 0;
-        }
-
-        .mix-info {
-            padding: 20px 24px;
-            background: #161616;
-            flex: 1;
-        }
-
-        .mix-result-name {
-            font-family: 'DM Serif Display', serif;
-            font-size: 1.2rem;
-            margin-bottom: 4px;
-            color: #f5f0eb;
-        }
-
-        .mix-result-hex {
-            font-size: 0.8rem;
-            color: #7a756f;
-            margin-bottom: 12px;
-        }
-
-        .mix-result-desc {
-            font-size: 0.85rem;
-            color: #c9c2ba;
-            line-height: 1.5;
-            margin-bottom: 12px;
-        }
-
-        .mix-result-tip {
-            font-size: 0.8rem;
-            color: #7a756f;
-            line-height: 1.5;
-            padding-left: 12px;
-            border-left: 2px solid #2a2a2a;
-        }
-
-        .loading {
-            text-align: center;
-            color: #4a4540;
-            padding: 40px;
-            font-size: 0.9rem;
-        }
-
-        .loading-dots::after {
-            content: '';
-            animation: dots 1.5s steps(4, end) infinite;
-        }
-
-        @keyframes dots {
-            0% { content: ''; }
-            25% { content: '.'; }
-            50% { content: '..'; }
-            75% { content: '...'; }
-        }
-
-        .error {
-            text-align: center;
-            color: #a05050;
-            padding: 20px;
-            font-size: 0.85rem;
-        }
-
-        .footer {
-            text-align: center;
-            color: #2a2a2a;
-            font-size: 0.75rem;
-            margin-top: 64px;
-            padding-top: 24px;
-            border-top: 1px solid #1a1a1a;
-        }
-
-        .footer a {
-            color: #4a4540;
-            text-decoration: none;
-        }
-
         @media (max-width: 600px) {
-            h1 { font-size: 2rem; }
-            .palette-grid { grid-template-columns: repeat(5, 1fr); }
+            h1 { font-size: 2rem; } .nav-brand { display: none; } .nav-inner { gap: 8px; } .nav-btn { padding: 8px 12px; font-size: 0.8rem; }
             .color-card { min-height: 160px; padding: 10px 8px; }
-            .color-name { font-size: 0.7rem; }
-            .color-desc { display: none; }
-            .input-group { flex-direction: column; }
-            .mix-inputs { flex-wrap: wrap; }
+            .color-ratio { font-size: 0.7rem; top: 8px; left: 8px; } .input-group { flex-direction: column; } .mix-inputs { flex-wrap: wrap; }
+            .recipe-row { gap: 10px; }
+            .shelf-chip { width: 30px; height: 30px; }
         }
     </style>
 </head>
 <body>
+    <div id="shelfTooltip"><div class="tt-name" id="ttName"></div><div class="tt-code" id="ttCode"></div><div class="tt-hex" id="ttHex"></div></div>
+    <nav class="nav"><div class="nav-inner">
+        <span class="nav-brand">Palette Gen</span>
+        <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
+        <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
+        <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
+    </div></nav>
+    <div class="page-wrapper">
+    <aside class="config-panel">
+        <p class="config-heading">Settings</p>
+        <div class="config-item">
+            <span class="config-label">Canvas</span>
+            <div class="config-row">
+                <input type="number" class="cfg-num" id="cfgWidth" value="30" min="1" max="200" oninput="calculatePaintNeeded()" />
+                <span class="config-x">×</span>
+                <input type="number" class="cfg-num" id="cfgHeight" value="40" min="1" max="200" oninput="calculatePaintNeeded()" />
+            </div>
+            <span class="config-unit">cm</span>
+            <div class="config-total" id="cfgTotal"></div>
+        </div>
+        <div class="config-item">
+            <span class="config-label">Flood base</span>
+            <button class="config-toggle" id="floodToggle" onclick="toggleFloodMode()">Off</button>
+        </div>
+    </aside>
     <div class="container">
         <h1>Palette Gen</h1>
         <p class="subtitle">AI-powered color palettes for acrylic pour painters</p>
-
-        <p class="section-title">Generate a palette</p>
-        <div class="input-group">
-            <input type="text" id="promptInput" placeholder="Describe a mood, theme, or scene..." />
-            <button id="generateBtn" onclick="generatePalette()">Generate</button>
+        <div class="section active" id="generateSection">
+            <p class="section-title">Generate a palette</p>
+            <p class="section-desc">Describe a mood or scene and get a full pour palette with mixing recipes.</p>
+            <div class="input-group">
+                <input type="text" id="promptInput" placeholder="Describe a mood, theme, or scene..." onfocus="this.select()" />
+                <button id="generateBtn" onclick="generatePalette()">Generate</button>
+            </div>
+            <div id="paletteResult"></div>
         </div>
-
-        <div id="paletteResult"></div>
-
         <div class="divider"></div>
-
-        <div class="mix-section">
+        <div class="section" id="mixSection">
             <p class="section-title">Mix two colors</p>
+            <p class="section-desc">See what two colors produce when poured together.</p>
             <div class="mix-inputs">
-                <div class="color-input-wrapper">
-                    <input type="color" id="color1" value="#8B4513" />
-                    <input type="text" id="color1Hex" value="#8B4513" style="width: 100px;" />
-                </div>
+                <div class="color-input-wrapper"><input type="color" id="color1" value="#000000" /><input type="text" id="color1Hex" value="#000000" style="width:100px;" /></div>
                 <span class="mix-plus">+</span>
-                <div class="color-input-wrapper">
-                    <input type="color" id="color2" value="#DAA520" />
-                    <input type="text" id="color2Hex" value="#DAA520" style="width: 100px;" />
-                </div>
+                <div class="color-input-wrapper"><input type="color" id="color2" value="#000000" /><input type="text" id="color2Hex" value="#000000" style="width:100px;" /></div>
+                <button class="mix-shuffle-btn" onclick="randomizeMixColors()" title="Pick random Amsterdam colours">&#8645;</button>
                 <button id="mixBtn" onclick="mixColors()">Mix</button>
             </div>
-
             <div id="mixResult" class="mix-result"></div>
         </div>
-
-        <div class="footer">
-            Built by Roland Gebe | <a href="https://github.com/gerocael/palette-gen">GitHub</a>
+        <div class="divider"></div>
+        <div class="section" id="shelfSection">
+            <p class="section-title">Pour from my shelf</p>
+            <p class="section-desc">Pick the Amsterdam tubes you own and get palette ideas you can actually make.</p>
+            <div class="shelf-search">
+                <input type="text" id="shelfSearch" placeholder="Search colours..." oninput="filterShelf()" />
+            </div>
+            <div class="shelf-chips" id="shelfChips"></div>
+            <div class="shelf-selected-count" id="shelfCount">0 tubes selected</div>
+            <div class="base-picker-row" id="basePickerRow">
+                <span class="base-picker-label">Flood base</span>
+                <div id="baseOptions"></div>
+            </div>
+            <button id="suggestBtn" onclick="suggestPalettes()">Suggest palettes</button>
+            <div id="suggestResult" style="margin-top:24px;"></div>
         </div>
-    </div>
-
+        <div class="footer">Built by Roland Gebe | <a href="https://github.com/gerocael/palette-gen">GitHub</a></div>
+    </div></div>
     <script>
-        document.getElementById('color1').addEventListener('input', (e) => {
-            document.getElementById('color1Hex').value = e.target.value.toUpperCase();
-        });
-        document.getElementById('color2').addEventListener('input', (e) => {
-            document.getElementById('color2Hex').value = e.target.value.toUpperCase();
-        });
-        document.getElementById('color1Hex').addEventListener('input', (e) => {
-            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                document.getElementById('color1').value = e.target.value;
-            }
-        });
-        document.getElementById('color2Hex').addEventListener('input', (e) => {
-            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                document.getElementById('color2').value = e.target.value;
-            }
-        });
+    let lastPalette = null;
 
-        document.getElementById('promptInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') generatePalette();
-        });
+    const moods = ['Peaceful','Dramatic','Dreamy','Vibrant','Melancholic','Fiery','Serene','Moody','Ethereal','Bold','Warm','Icy','Nostalgic','Electric','Soft'];
+    const scenes = ['sunset over the ocean','forest after rain','mountain lake at dawn','desert canyon','lavender field','coral reef','northern lights','cherry blossom garden','thunderstorm clouds','autumn vineyard','tropical jungle','frozen waterfall','wildflower meadow','volcanic landscape','moonlit beach','misty valley','bamboo forest','Mediterranean coast','tulip field at sunrise','deep cave crystals','prairie at golden hour','mangrove swamp'];
+    document.getElementById('promptInput').value = `${moods[Math.floor(Math.random()*moods.length)]} ${scenes[Math.floor(Math.random()*scenes.length)]}`;
 
-        function getTextColor(hex) {
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-            return luminance > 0.5 ? '#1a1a1a' : '#f5f0eb';
+    const ML_PER_CM2 = 0.17, PAINT_RATIO = 0.5, RESERVE = 1.2;
+
+    // Amsterdam Standard Series — complete 102-colour set (source: official colour chart)
+    const allTubes = [
+        {tube:'Zinc White 104',hex:'#F5F5F0'},
+        {tube:'Titanium White 105',hex:'#FAFAFA'},
+        {tube:'Permanent Lemon Yellow Light 217',hex:'#F0EE98'},
+        {tube:'Naples Yellow Light 222',hex:'#F0D49B'},
+        {tube:'Naples Yellow Deep 223',hex:'#E8C36A'},
+        {tube:'Naples Yellow Red 224',hex:'#E8A850'},
+        {tube:'Yellow Ochre 227',hex:'#C8A63C'},
+        {tube:'Gold Ochre 231',hex:'#C8962C'},
+        {tube:'Raw Sienna 234',hex:'#A66E3C'},
+        {tube:'Greenish Yellow 243',hex:'#C8CE30'},
+        {tube:'Gold Yellow 253',hex:'#E8B030'},
+        {tube:'Reflex Yellow 256',hex:'#FAFF00'},
+        {tube:'Reflex Orange 257',hex:'#FF6A00'},
+        {tube:'Azo Yellow Lemon 267',hex:'#F0E030'},
+        {tube:'Azo Yellow Light 268',hex:'#FDE100'},
+        {tube:'Azo Yellow Medium 269',hex:'#F5C800'},
+        {tube:'Azo Yellow Deep 270',hex:'#ECA800'},
+        {tube:'Transparent Yellow Medium 272',hex:'#E8B800'},
+        {tube:'Nickel Titanium Yellow 274',hex:'#D4C84A'},
+        {tube:'Primary Yellow 275',hex:'#F4C800'},
+        {tube:'Azo Orange 276',hex:'#E8762B'},
+        {tube:'Naples Yellow Green 282',hex:'#D8D080'},
+        {tube:'Titanium Buff Light 289',hex:'#E8D4A8'},
+        {tube:'Titanium Buff Deep 290',hex:'#D4B888'},
+        {tube:'Naples Yellow Red Light 292',hex:'#E8C080'},
+        {tube:'Vermilion 311',hex:'#D83420'},
+        {tube:'Pyrrole Red 315',hex:'#CC2828'},
+        {tube:'Venetian Rose 316',hex:'#E88090'},
+        {tube:'Transparent Red Medium 317',hex:'#B82020'},
+        {tube:'Carmine 318',hex:'#9C1B33'},
+        {tube:'Persian Rose 330',hex:'#C84880'},
+        {tube:'Caput Mortuum Violet 344',hex:'#6E3A48'},
+        {tube:'Permanent Red Purple 348',hex:'#8C1B4A'},
+        {tube:'Light Rose 361',hex:'#F0B8C8'},
+        {tube:'Quinacridone Rose 366',hex:'#C83478'},
+        {tube:'Primary Magenta 369',hex:'#C41E7F'},
+        {tube:'Reflex Rose 384',hex:'#FF2080'},
+        {tube:'Quinacridone Rose Light 385',hex:'#E8A0C8'},
+        {tube:'Naphthol Red Medium 396',hex:'#C8202C'},
+        {tube:'Naphthol Red Light 398',hex:'#E83848'},
+        {tube:'Naphthol Red Deep 399',hex:'#A01824'},
+        {tube:'Vandyke Brown 403',hex:'#3C2412'},
+        {tube:'Raw Umber 408',hex:'#4E3C2C'},
+        {tube:'Burnt Umber 409',hex:'#5C4033'},
+        {tube:'Burnt Sienna 411',hex:'#8A4530'},
+        {tube:'Ultramarine 504',hex:'#1B2A6B'},
+        {tube:'Ultramarine Light 505',hex:'#3050B0'},
+        {tube:'Ultramarine Violet 507',hex:'#392468'},
+        {tube:'Cobalt Blue (Ultramarine) 512',hex:'#2B4898'},
+        {tube:"King's Blue 517",hex:'#4A72B8'},
+        {tube:'Ultramarine Violet Light 519',hex:'#5C3C8F'},
+        {tube:'Turquoise Blue 522',hex:'#00838F'},
+        {tube:'Sky Blue Light 551',hex:'#90C4E0'},
+        {tube:'Lilac 556',hex:'#B898D4'},
+        {tube:'Greenish Blue 557',hex:'#006B7D'},
+        {tube:'Greyish Blue 562',hex:'#7098B8'},
+        {tube:'Brilliant Blue 564',hex:'#3255A4'},
+        {tube:'Prussian Blue (Phthalo) 566',hex:'#003153'},
+        {tube:'Permanent Red Violet 567',hex:'#7C2855'},
+        {tube:'Permanent Blue Violet 568',hex:'#3B2D80'},
+        {tube:'Phthalo Blue 570',hex:'#13384E'},
+        {tube:'Primary Cyan 572',hex:'#0093C8'},
+        {tube:'Permanent Red Violet Light 577',hex:'#E090B8'},
+        {tube:'Manganese Blue Phthalo 582',hex:'#0098B8'},
+        {tube:'Brilliant Green 605',hex:'#50C050'},
+        {tube:'Emerald Green 615',hex:'#1E8C5A'},
+        {tube:'Yellowish Green 617',hex:'#9CB83C'},
+        {tube:'Permanent Green Light 618',hex:'#2E7D4F'},
+        {tube:'Permanent Green Deep 619',hex:'#1B5E3A'},
+        {tube:'Olive Green Light 621',hex:'#8CA040'},
+        {tube:'Olive Green Deep 622',hex:'#424A24'},
+        {tube:'Sap Green 623',hex:'#4A7A2E'},
+        {tube:'Turquoise Green Light 660',hex:'#70C4B0'},
+        {tube:'Turquoise Green 661',hex:'#00897B'},
+        {tube:'Yellowish Green Light 664',hex:'#A8D060'},
+        {tube:'Reflex Green 672',hex:'#00D840'},
+        {tube:'Phthalo Green 675',hex:'#1A5E4A'},
+        {tube:'Lamp Black 702',hex:'#1C1C1C'},
+        {tube:"Payne's Grey 708",hex:'#3A4248'},
+        {tube:'Neutral Grey 710',hex:'#8C8C8C'},
+        {tube:'Warm Grey 718',hex:'#8C7D6D'},
+        {tube:'Oxide Black 735',hex:'#2C2420'},
+        {tube:'Bluish Grey Light 750',hex:'#B0B8C8'},
+        {tube:'Silver 800',hex:'#C0C0C0'},
+        {tube:'Light Gold 802',hex:'#CFB53B'},
+        {tube:'Deep Gold 803',hex:'#AA8C30'},
+        {tube:'Copper 805',hex:'#B87040'},
+        {tube:'Bronze 811',hex:'#8B6934'},
+        {tube:'Pewter 815',hex:'#8F9196'},
+        {tube:'Pearl White 817',hex:'#F0EDE8'},
+        {tube:'Pearl Yellow 818',hex:'#E8D890'},
+        {tube:'Pearl Red 819',hex:'#D4848A'},
+        {tube:'Pearl Blue 820',hex:'#8AAEC4'},
+        {tube:'Pearl Violet 821',hex:'#C0A8C8'},
+        {tube:'Pearl Green 822',hex:'#7AAE8C'},
+        {tube:'Metallic Yellow 831',hex:'#D4B840'},
+        {tube:'Metallic Red 832',hex:'#C03040'},
+        {tube:'Metallic Blue 834',hex:'#4070A0'},
+        {tube:'Metallic Violet 835',hex:'#6850A0'},
+        {tube:'Metallic Green 836',hex:'#308050'},
+        {tube:'Graphite 840',hex:'#4A4A4A'},
+        {tube:'Metallic Black 850',hex:'#3C3C3C'}
+    ];
+
+    let selectedTubes = new Set();
+    let baseColor = null;
+    let floodMode = false;
+
+    function toggleFloodMode() {
+        floodMode = !floodMode;
+        const btn = document.getElementById('floodToggle');
+        btn.textContent = floodMode ? 'On' : 'Off';
+        btn.classList.toggle('on', floodMode);
+        renderBasePicker();
+    }
+
+    const ttEl = document.getElementById('shelfTooltip');
+    const ttName = document.getElementById('ttName');
+    const ttCode = document.getElementById('ttCode');
+    const ttHex  = document.getElementById('ttHex');
+
+    function showChipTooltip(chip) {
+        ttName.textContent = chip.dataset.name;
+        ttCode.textContent = chip.dataset.code ? `No. ${chip.dataset.code}` : '';
+        ttCode.style.display = chip.dataset.code ? '' : 'none';
+        ttHex.textContent = chip.dataset.hex;
+        ttEl.style.display = 'block';
+        const r = chip.getBoundingClientRect();
+        const tw = ttEl.offsetWidth, th = ttEl.offsetHeight;
+        let left = r.left + r.width / 2 - tw / 2;
+        let top  = r.top - th - 10;
+        if (left < 8) left = 8;
+        if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+        if (top < 8) top = r.bottom + 10;
+        ttEl.style.left = left + 'px';
+        ttEl.style.top  = top  + 'px';
+    }
+
+    document.getElementById('shelfChips').addEventListener('mouseover', e => {
+        const chip = e.target.closest('.shelf-chip');
+        if (chip) showChipTooltip(chip);
+    });
+    document.getElementById('shelfChips').addEventListener('mouseleave', () => { ttEl.style.display = 'none'; });
+    document.getElementById('shelfChips').addEventListener('mouseout', e => {
+        if (!e.relatedTarget || !e.relatedTarget.closest('.shelf-chip')) ttEl.style.display = 'none';
+    });
+
+    function renderShelfChips() {
+        const container = document.getElementById('shelfChips');
+        const search = (document.getElementById('shelfSearch').value || '').toLowerCase();
+        let html = '';
+        allTubes.forEach(t => {
+            const matchesSearch = !search || t.tube.toLowerCase().includes(search);
+            const sel = selectedTubes.has(t.tube);
+            const hiddenClass = matchesSearch ? '' : 'hidden';
+            const escapedTube = t.tube.replace(/'/g, "\\'");
+            const code = extractCode(t.tube) || '';
+            html += `<div class="shelf-chip ${sel?'selected':''} ${hiddenClass}" style="background:${t.hex}"
+                data-name="${stripCode(t.tube)}" data-code="${code}" data-hex="${t.hex}"
+                onclick="toggleTube('${escapedTube}')"></div>`;
+        });
+        container.innerHTML = html;
+        updateShelfCount();
+    }
+
+
+    function filterShelf() { renderShelfChips(); }
+    function toggleTube(t) {
+        if (selectedTubes.has(t)) { selectedTubes.delete(t); if (baseColor === t) baseColor = null; }
+        else selectedTubes.add(t);
+        renderShelfChips();
+    }
+    function updateShelfCount() {
+        const c = selectedTubes.size;
+        document.getElementById('shelfCount').textContent = `${c} tube${c===1?'':'s'} selected`;
+        renderBasePicker();
+    }
+    function setBase(tube) { baseColor = tube; renderBasePicker(); }
+    function renderBasePicker() {
+        const row = document.getElementById('basePickerRow');
+        const opts = document.getElementById('baseOptions');
+        if (!floodMode || selectedTubes.size === 0) { row.style.display = 'none'; if (!floodMode) baseColor = null; return; }
+        row.style.display = 'flex';
+        let html = `<button class="base-option ${!baseColor ? 'active' : ''}" onclick="setBase(null)">AI picks</button>`;
+        selectedTubes.forEach(tube => {
+            const t = allTubes.find(a => a.tube === tube);
+            const isActive = baseColor === tube;
+            html += `<button class="base-option ${isActive ? 'active' : ''}" onclick="setBase('${tube.replace(/'/g, "\\'")}')">
+                <span class="base-dot" style="background:${t ? t.hex : '#888'}"></span>${stripCode(tube)}
+            </button>`;
+        });
+        opts.innerHTML = html;
+    }
+    function showSection(id, btn) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function randomizeMixColors() {
+        const shuffled = [...allTubes].sort(() => Math.random() - 0.5);
+        const [a, b] = shuffled.slice(0, 2);
+        document.getElementById('color1').value = a.hex;
+        document.getElementById('color1Hex').value = a.hex.toUpperCase();
+        document.getElementById('color2').value = b.hex;
+        document.getElementById('color2Hex').value = b.hex.toUpperCase();
+    }
+    randomizeMixColors();
+
+    document.getElementById('color1').addEventListener('input', e => { document.getElementById('color1Hex').value = e.target.value.toUpperCase(); });
+    document.getElementById('color2').addEventListener('input', e => { document.getElementById('color2Hex').value = e.target.value.toUpperCase(); });
+    document.getElementById('color1Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('color1').value = e.target.value; });
+    document.getElementById('color2Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('color2').value = e.target.value; });
+    document.getElementById('promptInput').addEventListener('keydown', e => { if (e.key==='Enter') generatePalette(); });
+
+    function hexToRgb(hex) {
+        hex = hex.replace('#','');
+        if (hex.length !== 6) return [0,0,0];
+        return [parseInt(hex.substring(0,2),16)||0, parseInt(hex.substring(2,4),16)||0, parseInt(hex.substring(4,6),16)||0];
+    }
+    function getTextColor(hex) { const [r,g,b] = hexToRgb(hex); return (0.299*r+0.587*g+0.114*b)/255 > 0.5 ? '#1a1a1a' : '#f5f0eb'; }
+    function extractCode(name) { const m = name.match(/\s(\d{3})$/); return m ? m[1] : null; }
+    function stripCode(name) { return name.replace(/\s\d{3}$/, ''); }
+
+    function getColorDisplayName(color) {
+        const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
+        if (valid.length === 1) return stripCode(valid[0].tube);
+        if (valid.length > 1) return valid.map(ing => stripCode(ing.tube)).join(' + ');
+        return stripCode(color.name);
+    }
+
+    function getHexDisplay(color) {
+        const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
+        if (valid.length === 1) {
+            const code = extractCode(valid[0].tube);
+            return code ? `${color.hex_code} | ${code}` : color.hex_code;
         }
+        return color.hex_code;
+    }
 
-        async function generatePalette() {
-            const prompt = document.getElementById('promptInput').value.trim();
-            if (!prompt) {
-            document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>';
-            return;
-}
+    function calculatePaintNeeded() {
+        if (!lastPalette) return;
+        const w = parseFloat(document.getElementById('cfgWidth').value)||0;
+        const h = parseFloat(document.getElementById('cfgHeight').value)||0;
+        if (w<=0||h<=0) return;
+        const totalMixed = Math.round(w*h*ML_PER_CM2*RESERVE);
+        const totalPaint = Math.round(totalMixed*PAINT_RATIO);
+        const el = document.getElementById('cfgTotal');
+        if (el) el.textContent = `${totalPaint}g paint + ${totalPaint}g medium`;
+        lastPalette.colors.forEach((color,i) => {
+            const cg = Math.round(totalPaint*((color.pour_ratio||20)/100));
+            const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
+            if (valid.length > 0) {
+                const rt = valid.reduce((s,ing) => s+ing.grams,0);
+                if (rt > 0) { const sc = cg/rt; valid.forEach((ing,j) => { const ge = document.getElementById(`recipe-grams-${i}-${j}`); if (ge) ge.textContent = `${Math.round(ing.grams*sc)}g`; }); }
+                const te = document.getElementById(`recipe-total-grams-${i}`);
+                if (te) te.textContent = `${cg}g`;
+            }
+        });
+        const gte = document.getElementById('recipeGrandTotal');
+        if (gte) gte.textContent = `${totalPaint}g`;
+    }
 
-            const btn = document.getElementById('generateBtn');
-            const result = document.getElementById('paletteResult');
+    function savePaletteAsPng() {
+        if (!lastPalette) return;
+        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+        const width=1200, swatchH=280, headerH=80, footerH=60;
+        canvas.width=width; canvas.height=headerH+swatchH+footerH;
+        ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,width,canvas.height);
+        ctx.fillStyle='#f5f0eb'; ctx.font='bold 28px sans-serif'; ctx.fillText('Palette Gen',32,48);
+        ctx.fillStyle='#7a756f'; ctx.font='14px sans-serif'; ctx.fillText(`"${lastPalette.prompt||lastPalette.name||''}"`,32,70);
+        const sw=width/5;
+        lastPalette.colors.forEach((color,i) => {
+            const x=i*sw, y=headerH;
+            ctx.fillStyle=color.hex_code; ctx.fillRect(x,y,sw,swatchH);
+            const tc=getTextColor(color.hex_code);
+            if (color.pour_ratio) { ctx.fillStyle=tc; ctx.globalAlpha=0.5; ctx.font='500 14px sans-serif'; ctx.fillText(`${color.pour_ratio}%`,x+14,y+24); ctx.globalAlpha=1; }
+            const ty=y+swatchH-20;
+            ctx.fillStyle=tc; ctx.globalAlpha=0.85; ctx.font='500 13px sans-serif'; ctx.fillText(getHexDisplay(color),x+14,ty-22);
+            ctx.globalAlpha=1; ctx.font='bold 14px sans-serif';
+            const displayName = getColorDisplayName(color);
+            // Wrap long names in PNG
+            if (displayName.length > 18) { ctx.font='bold 11px sans-serif'; }
+            ctx.fillText(displayName,x+14,ty); ctx.globalAlpha=1;
+        });
+        ctx.fillStyle='#7a756f'; ctx.font='12px sans-serif'; ctx.fillText('palette-gen-heti.onrender.com',32,canvas.height-20);
+        const link=document.createElement('a');
+        link.download=`palette-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
+        link.href=canvas.toDataURL('image/png'); link.click();
+    }
 
-            btn.disabled = true;
-            btn.textContent = 'Generating...';
-            result.innerHTML = '<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
+    function variationOf(mod) { if (!lastPalette) return; document.getElementById('promptInput').value = `${lastPalette.prompt}, but ${mod}`; generatePalette(); }
 
-            try {
-                const response = await fetch('/palette/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt })
+    function renderPalette(data, targetId, showVariations) {
+        let html = '';
+        if (showVariations) {
+            html += `<div class="variation-wrapper">
+                <button class="save-btn" onclick="variationOf('warmer')">Warmer</button>
+                <button class="save-btn" onclick="variationOf('cooler')">Cooler</button>
+                <button class="save-btn" onclick="variationOf('more muted')">Muted</button>
+                <button class="save-btn" onclick="variationOf('higher contrast')">Contrast</button>
+                <button class="save-btn" onclick="variationOf('more pastel')">Pastel</button>
+            </div>`;
+        }
+        const numCols = data.colors.length;
+        html += `<div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
+        data.colors.forEach(color => {
+            const tc = getTextColor(color.hex_code);
+            const isBase = color.role === 'base';
+            html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
+                ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
+                ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
+                <div class="color-hex">${color.hex_code}</div>
+            </div>`;
+        });
+        html += '</div>';
+        html += `<div class="download-wrapper"><button class="download-btn" onclick="savePaletteAsPng()" title="Save as PNG">&#8681;</button></div>`;
+
+        const colorsWithRecipe = data.colors.map((color, i) => {
+            const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
+            return { color, index: i, ingredients: valid };
+        }).filter(c => c.ingredients.length > 0);
+
+        if (colorsWithRecipe.length > 0) {
+            html += '<div class="recipe-section"><div class="recipe-heading">How to mix with Amsterdam Standard Series</div>';
+            let grandTotal = 0;
+            colorsWithRecipe.forEach(({ color, index: i, ingredients }) => {
+                const rt = ingredients.reduce((s,ing) => s+ing.grams,0);
+                grandTotal += rt;
+                let ingHtml = '';
+                ingredients.forEach((ing,j) => {
+                    ingHtml += `<div class="recipe-ingredient">
+                        <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
+                        <span class="recipe-tube">${ing.tube}</span>
+                        <span class="recipe-grams" id="recipe-grams-${i}-${j}">${Math.round(ing.grams)}g</span>
+                    </div>`;
                 });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.detail || 'Failed to generate');
+                if (ingredients.length > 1) {
+                    ingHtml += `<div class="recipe-total"><span class="recipe-total-label">Total</span><span class="recipe-total-grams" id="recipe-total-grams-${i}">${Math.round(rt)}g</span></div>`;
                 }
-
-                const data = await response.json();
-
-                let html = '<div class="palette-grid active">';
-                data.colors.forEach(color => {
-                    const textColor = getTextColor(color.hex_code);
-                    html += `
-                        <div class="color-card" style="background: ${color.hex_code}; color: ${textColor}">
-                            <div class="color-hex">${color.hex_code}</div>
-                            <div class="color-name">${color.name}</div>
-                            <div class="color-desc">${color.description}</div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                html += `<div class="prompt-label">"${data.prompt}"</div>`;
-
-                result.innerHTML = html;
-            } catch (err) {
-                result.innerHTML = `<div class="error">${err.message}</div>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Generate';
-            }
+                html += `<div class="recipe-row">
+                    <div class="recipe-swatch" style="background:${color.hex_code}"></div>
+                    <div class="recipe-ingredients">${ingHtml}</div>
+                </div>`;
+            });
+            html += `<div class="recipe-grand-total"><span>Total paint</span><span id="recipeGrandTotal">${Math.round(grandTotal)}g</span></div>`;
+            html += '<div class="recipe-disclaimer">These mixing recipes are AI-generated approximations based on color theory. Actual results will vary depending on paint consistency, pouring medium ratios, and pigment strength. Always test-mix a small amount first and adjust by eye.</div></div>';
         }
-
-        async function mixColors() {
-            const color1 = document.getElementById('color1Hex').value;
-            const color2 = document.getElementById('color2Hex').value;
-
-            if (!color1 || !color2) return;
-
-            const btn = document.getElementById('mixBtn');
-            const result = document.getElementById('mixResult');
-
-            btn.disabled = true;
-            btn.textContent = 'Mixing...';
-            result.className = 'mix-result active';
-            result.innerHTML = '<div class="loading">Analyzing mix<span class="loading-dots"></span></div>';
-
-            try {
-                const response = await fetch('/palette/mix', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ color1, color2 })
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.detail || 'Failed to mix');
-                }
-
-                const data = await response.json();
-
-                result.innerHTML = `
-                    <div class="mix-result-header">
-                        <div class="mix-color-preview" style="background: ${data.result_hex}"></div>
-                        <div class="mix-info">
-                            <div class="mix-result-name">${data.result_name}</div>
-                            <div class="mix-result-hex">${data.result_hex}</div>
-                            <div class="mix-result-desc">${data.description}</div>
-                            <div class="mix-result-tip">${data.pour_tip}</div>
-                        </div>
-                    </div>
-                `;
-            } catch (err) {
-                result.innerHTML = `<div class="error">${err.message}</div>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Mix';
-            }
+        if (data.prompt) html += `<div class="prompt-label">"${data.prompt}"</div>`;
+        if (data.technique) {
+            html += `<div class="technique-card"><div class="technique-name">${data.technique.name}</div>
+                <div class="technique-reason">${data.technique.reason}</div>
+                <div class="technique-tip">${data.technique.tip}</div></div>`;
         }
+        document.getElementById(targetId).innerHTML = html;
+        calculatePaintNeeded();
+    }
+
+    async function generatePalette() {
+        const prompt = document.getElementById('promptInput').value.trim();
+        if (!prompt) { document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>'; return; }
+        const btn=document.getElementById('generateBtn'), result=document.getElementById('paletteResult');
+        btn.disabled=true; btn.textContent='Generating...';
+        result.innerHTML='<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
+        try {
+            const r = await fetch('/palette/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,num_colors:5})});
+            if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
+            const data = await r.json(); lastPalette = data; renderPalette(data,'paletteResult',true);
+        } catch(err) { result.innerHTML=`<div class="error">${err.message}</div>`; }
+        finally { btn.disabled=false; btn.textContent='Generate'; }
+    }
+
+    let suggestedPalettes = [];
+    async function suggestPalettes() {
+        if (selectedTubes.size<2) { document.getElementById('suggestResult').innerHTML='<div class="error">Select at least 2 tubes from your shelf first.</div>'; return; }
+        const btn=document.getElementById('suggestBtn'), result=document.getElementById('suggestResult');
+        btn.disabled=true; btn.textContent='Thinking...';
+        result.innerHTML='<div class="loading">Finding palettes from your shelf<span class="loading-dots"></span></div>';
+        try {
+            const r = await fetch('/palette/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tubes:Array.from(selectedTubes),base_tube:baseColor||null,flood_mode:floodMode})});
+            if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
+            const data = await r.json(); suggestedPalettes = data.palettes;
+            let html = '';
+            data.palettes.forEach((p,idx) => {
+                let sw = '';
+                p.colors.forEach(c => { sw += `<div class="suggest-card-swatch${c.role==='base'?' is-base':''}" style="background:${c.hex_code}"></div>`; });
+                html += `<div class="suggest-card" onclick="pickSuggestion(${idx})"><div class="suggest-card-swatches">${sw}</div>
+                    <div class="suggest-card-body"><div class="suggest-card-name">${p.name}</div><div class="suggest-card-mood">${p.mood}</div></div></div>`;
+            });
+            html += '<div id="pickedPalette" style="margin-top:24px;"></div>';
+            result.innerHTML = html;
+        } catch(err) { result.innerHTML=`<div class="error">${err.message}</div>`; }
+        finally { btn.disabled=false; btn.textContent='Suggest palettes'; }
+    }
+
+    function pickSuggestion(idx) {
+        lastPalette = suggestedPalettes[idx];
+        renderPalette(lastPalette,'pickedPalette',false);
+        document.getElementById('pickedPalette').scrollIntoView({behavior:'smooth'});
+    }
+
+    async function mixColors() {
+        const c1=document.getElementById('color1Hex').value, c2=document.getElementById('color2Hex').value;
+        if (!c1||!c2) return;
+        const btn=document.getElementById('mixBtn'), result=document.getElementById('mixResult');
+        btn.disabled=true; btn.textContent='Mixing...'; result.className='mix-result active';
+        result.innerHTML='<div class="loading">Analyzing mix<span class="loading-dots"></span></div>';
+        try {
+            const r = await fetch('/palette/mix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({color1:c1,color2:c2})});
+            if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
+            const data = await r.json();
+            result.innerHTML=`<div class="mix-result-header"><div class="mix-color-preview" style="background:${data.result_hex}"></div>
+                <div class="mix-info"><div class="mix-result-name">${data.result_name}</div><div class="mix-result-hex">${data.result_hex}</div>
+                <div class="mix-result-desc">${data.description}</div><div class="mix-result-tip">${data.pour_tip}</div></div></div>`;
+        } catch(err) { result.innerHTML=`<div class="error">${err.message}</div>`; }
+        finally { btn.disabled=false; btn.textContent='Mix'; }
+    }
+
+    renderShelfChips();
     </script>
 </body>
 </html>
