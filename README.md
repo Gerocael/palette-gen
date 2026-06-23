@@ -1,94 +1,76 @@
-Palette Generator API
-A REST API that uses AI to generate color palettes for artists, especially acrylic pour painters. Give it a mood, theme, or description and it returns a thoughtful palette with hex codes, names, and emotional descriptions.
-Live demo: https://palette-gen-heti.onrender.com/
+# Palette Gen
 
-Tech Stack
+AI-powered color palette generator for acrylic pour painters. Built around the Royal Talens Amsterdam Standard Series — the full 102-colour set.
 
-Python
-FastAPI
-Anthropic Claude API (claude-sonnet-4-6)
-Pydantic for data validation
+**Live demo:** https://palette-gen-heti.onrender.com/
 
-Setup
+---
 
-Clone the repository:
+## Features
 
-git clone https://github.com/gerocael/palette-gen.git
+**Generate a palette** — describe a mood, scene, or theme and get a 5-colour palette with hex codes, pour ratios, and Amsterdam tube mixing recipes.
+
+**Mix two colours** — pick any two hex colours and get an AI description of the mixed result, including a pour tip. Colours are randomised from the Amsterdam database on load.
+
+**Pour from my shelf** — select the tubes you own, then get 3 palette suggestions using only those tubes, with full mixing recipes and gram amounts.
+
+- **Flood base mode** (optional, toggled in settings) — designates one colour as the dominant flood layer. You can pick the base yourself or let the AI choose. Accent colours are selected for strong contrast against the base.
+
+**Canvas calculator** — set your canvas size in cm and the app calculates how much paint and medium you need, scaled per colour by pour ratio.
+
+**Light / dark mode** — toggle in the nav bar, preference saved to localStorage.
+
+---
+
+## Tech Stack
+
+- **Frontend** — single-page HTML/CSS/JS, no framework
+- **Backend** — Python, FastAPI, Pydantic
+- **AI** — Anthropic Claude API (`claude-sonnet-4-6`) via LangChain + LangGraph (retry/validation loop)
+- **Colour data** — complete Amsterdam Standard Series (102 colours), sourced from official Royal Talens colour charts
+
+---
+
+## Setup
+
+```bash
+git clone https://github.com/Gerocael/palette-gen.git
 cd palette-gen
 
-Create and activate a virtual environment:
-
 python -m venv venv
-source venv/bin/activate  # Mac/Linux
-venv\Scripts\activate     # Windows
-
-Install dependencies:
+venv\Scripts\activate       # Windows
+# source venv/bin/activate  # Mac/Linux
 
 pip install -r requirements.txt
+```
 
-Create a .env file with your Anthropic API key:
+Create a `.env` file:
 
+```
 ANTHROPIC_API_KEY=your-key-here
+```
 
 Run the server:
 
+```bash
 uvicorn main:app --reload
+```
 
-Open http://127.0.0.1:8000/docs to explore the API.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-Endpoints
-POST /palette/generate
-Generates a 5-color palette based on a mood or theme.
-Request:
-json{
-  "prompt": "autumn forest at sunset"
-}
-Response:
-json{
-  "prompt": "autumn forest at sunset",
-  "colors": [
-    {
-      "hex_code": "#8B4513",
-      "name": "Saddle Brown",
-      "description": "Deep woody warmth of ancient bark"
-    },
-    {
-      "hex_code": "#DAA520",
-      "name": "Goldenrod",
-      "description": "Rich amber glow of fading sunlight"
-    },
-    {
-      "hex_code": "#CD853F",
-      "name": "Peru",
-      "description": "Soft warmth of scattered leaves"
-    },
-    {
-      "hex_code": "#8B0000",
-      "name": "Dark Red",
-      "description": "Bold crimson of turning maples"
-    },
-    {
-      "hex_code": "#2F4F4F",
-      "name": "Dark Slate",
-      "description": "Cool shadow beneath the canopy"
-    }
-  ]
-}
-POST /palette/mix
-Takes two hex colors and describes what they would produce when mixed in acrylic pouring.
-Request:
-json{
-  "color1": "#8B4513",
-  "color2": "#DAA520"
-}
-Response:
-json{
-  "color1": "#8B4513",
-  "color2": "#DAA520",
-  "result_hex": "#B27419",
-  "result_name": "Burnt Amber",
-  "description": "A rich, warm brown-gold that creates beautiful organic cells in acrylic pours",
-  "pour_tip": "Use as a base layer with a lighter gold on top for natural tree-bark patterns"
-}
-About
-Built as a personal tool combining my interest in acrylic pour painting with AI development. The prompt engineering ensures consistent, artist-friendly palette suggestions grounded in color theory and emotional context.
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/palette/generate` | Generate a palette from a text prompt |
+| POST | `/palette/suggest` | Suggest palettes from owned tubes |
+| POST | `/palette/mix` | Mix two hex colours |
+| GET | `/palette/history` | Last 5 generated palettes |
+
+Rate limited to 5 requests per endpoint per IP per day.
+
+---
+
+Built by Roland Gebe — combining acrylic pour painting with AI.
