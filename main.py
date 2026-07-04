@@ -94,6 +94,7 @@ class ComplementResponse(BaseModel):
 
 class MixGuideRequest(BaseModel):
     target_color: str
+    target_hex: str = ""
 
 class MixGuideResponse(BaseModel):
     target_hex: str
@@ -249,8 +250,9 @@ def mix_guide(request: MixGuideRequest, req: Request):
     check_rate_limit(req.client.host, "mix_guide")
     try:
         result = generate_mix_guide(target)
+        display_hex = request.target_hex or result.get("targetHex", target)
         color = build_colors([{
-            "hexCode": target,
+            "hexCode": display_hex,
             "colorName": result.get("colorName", "Unknown"),
             "mixRecipe": result.get("mixRecipe", [])
         }])[0]
@@ -259,7 +261,7 @@ def mix_guide(request: MixGuideRequest, req: Request):
             steps = []
         steps = [str(s) for s in steps if s]
         return MixGuideResponse(
-            target_hex=target,
+            target_hex=display_hex,
             color_name=color.name,
             mix_recipe=color.mix_recipe or [],
             steps=steps,

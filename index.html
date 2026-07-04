@@ -119,11 +119,20 @@
         .technique-reason { font-size: 0.85rem; color: var(--tx-2); line-height: 1.5; margin-bottom: 12px; }
         .technique-tip { font-size: 0.8rem; color: var(--tx-3); line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--bd); }
         .divider { display: none; }
-        .mix-inputs { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
-        .color-input-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; }
-        input[type="color"] { width: 40px; height: 40px; border: 1px solid var(--bd); border-radius: 6px; background: var(--surf); cursor: pointer; padding: 2px; }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
-        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+        .mix-inputs { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+        .tube-picker { position: relative; flex: 1; min-width: 140px; }
+        .tube-picker-trigger { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 8px; cursor: pointer; transition: border-color 0.2s; user-select: none; }
+        .tube-picker-trigger:hover { border-color: var(--bd-h); }
+        .tube-picker-swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.2); flex-shrink: 0; background: var(--surf-3); }
+        .tube-picker-name { flex: 1; font-size: 0.82rem; color: var(--tx-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tube-picker-name.has-value { color: var(--tx); }
+        .tube-picker-caret { font-size: 0.65rem; color: var(--tx-3); flex-shrink: 0; }
+        .tube-picker-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; width: 300px; background: var(--surf-2); border: 1px solid var(--bd-m); border-radius: 10px; box-shadow: 0 8px 24px var(--shad); z-index: 200; padding: 10px; }
+        .tube-picker-dropdown.open { display: block; }
+        .tube-picker-search { width: 100%; padding: 7px 10px; background: var(--surf); border: 1px solid var(--bd); border-radius: 6px; color: var(--tx); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; outline: none; margin-bottom: 8px; box-sizing: border-box; }
+        .tube-picker-search::placeholder { color: var(--tx-p); }
+        .tube-picker-search:focus { border-color: var(--bd-h); }
+        .tube-picker-chips { display: flex; flex-wrap: wrap; gap: 5px; max-height: 180px; overflow-y: auto; }
         .mix-plus { color: var(--tx-3); font-size: 1.2rem; }
         .comp-plus-toggle { cursor: pointer; transition: color 0.15s; }
         .comp-plus-toggle:hover { color: var(--tx-2); }
@@ -247,9 +256,29 @@
             <p class="section-title">Mix two colors</p>
             <p class="section-desc">See what two colors produce when poured together.</p>
             <div class="mix-inputs">
-                <div class="color-input-wrapper"><input type="color" id="color1" value="#000000" /><input type="text" id="color1Hex" value="#000000" style="width:100px;" /></div>
+                <div class="tube-picker" id="mixPicker1">
+                    <div class="tube-picker-trigger" onclick="toggleTubePicker('mixPicker1')">
+                        <div class="tube-picker-swatch" id="mixSwatch1"></div>
+                        <span class="tube-picker-name" id="mixName1">Pick a tube…</span>
+                        <span class="tube-picker-caret">▾</span>
+                    </div>
+                    <div class="tube-picker-dropdown" id="mixDropdown1">
+                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'mixChips1')" />
+                        <div class="tube-picker-chips" id="mixChips1"></div>
+                    </div>
+                </div>
                 <span class="mix-plus">+</span>
-                <div class="color-input-wrapper"><input type="color" id="color2" value="#000000" /><input type="text" id="color2Hex" value="#000000" style="width:100px;" /></div>
+                <div class="tube-picker" id="mixPicker2">
+                    <div class="tube-picker-trigger" onclick="toggleTubePicker('mixPicker2')">
+                        <div class="tube-picker-swatch" id="mixSwatch2"></div>
+                        <span class="tube-picker-name" id="mixName2">Pick a tube…</span>
+                        <span class="tube-picker-caret">▾</span>
+                    </div>
+                    <div class="tube-picker-dropdown" id="mixDropdown2">
+                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'mixChips2')" />
+                        <div class="tube-picker-chips" id="mixChips2"></div>
+                    </div>
+                </div>
                 <button class="mix-shuffle-btn" onclick="randomizeMixColors()" title="Pick random Amsterdam colours">&#8645;</button>
                 <button id="mixBtn" onclick="mixColors()">Mix</button>
             </div>
@@ -260,10 +289,30 @@
             <p class="section-title">Complementary colors</p>
             <p class="section-desc">Pick 1-2 colors and let AI suggest more to round out the palette — mixed from Amsterdam tubes, or pulled straight from your shelf if you've selected one.</p>
             <div class="mix-inputs">
-                <div class="color-input-wrapper"><input type="color" id="compColor1" value="#000000" /><input type="text" id="compColor1Hex" value="#000000" style="width:100px;" /></div>
+                <div class="tube-picker" id="compPicker1">
+                    <div class="tube-picker-trigger" onclick="toggleTubePicker('compPicker1')">
+                        <div class="tube-picker-swatch" id="compSwatch1"></div>
+                        <span class="tube-picker-name" id="compName1">Pick a tube…</span>
+                        <span class="tube-picker-caret">▾</span>
+                    </div>
+                    <div class="tube-picker-dropdown" id="compDropdown1">
+                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'compChips1')" />
+                        <div class="tube-picker-chips" id="compChips1"></div>
+                    </div>
+                </div>
                 <span class="mix-plus comp-plus-toggle" id="compPlusToggle" onclick="toggleSecondCompColor()" title="Add a second seed color">+</span>
-                <div class="color-input-wrapper" id="compColor2Wrapper" style="display:none;">
-                    <input type="color" id="compColor2" value="#000000" /><input type="text" id="compColor2Hex" value="#000000" style="width:100px;" />
+                <div id="compPicker2Wrapper" style="display:none; align-items:center; gap:8px; flex:1;">
+                    <div class="tube-picker" id="compPicker2" style="flex:1;">
+                        <div class="tube-picker-trigger" onclick="toggleTubePicker('compPicker2')">
+                            <div class="tube-picker-swatch" id="compSwatch2"></div>
+                            <span class="tube-picker-name" id="compName2">Pick a tube…</span>
+                            <span class="tube-picker-caret">▾</span>
+                        </div>
+                        <div class="tube-picker-dropdown" id="compDropdown2">
+                            <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'compChips2')" />
+                            <div class="tube-picker-chips" id="compChips2"></div>
+                        </div>
+                    </div>
                     <span class="comp-remove-toggle" onclick="toggleSecondCompColor()" title="Remove second color">&times;</span>
                 </div>
                 <button id="complementBtn" onclick="suggestComplement()">Suggest</button>
@@ -275,7 +324,17 @@
             <p class="section-title">Color mixing guide</p>
             <p class="section-desc">Pick a target color and get a step-by-step Amsterdam Standard Series recipe to mix it, with gram amounts for your batch size.</p>
             <div class="mix-inputs">
-                <div class="color-input-wrapper"><input type="color" id="guideColor" value="#000000" /><input type="text" id="guideColorHex" value="#000000" style="width:100px;" /></div>
+                <div class="tube-picker" id="guidePicker">
+                    <div class="tube-picker-trigger" onclick="toggleTubePicker('guidePicker')">
+                        <div class="tube-picker-swatch" id="guideSwatch"></div>
+                        <span class="tube-picker-name" id="guideName">Pick a tube…</span>
+                        <span class="tube-picker-caret">▾</span>
+                    </div>
+                    <div class="tube-picker-dropdown" id="guideDropdown">
+                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'guideChips')" />
+                        <div class="tube-picker-chips" id="guideChips"></div>
+                    </div>
+                </div>
                 <div class="guide-total-wrapper"><input type="number" class="cfg-num" id="guideTotalGrams" value="20" min="1" max="500" oninput="rescaleMixGuide()" /><span class="config-unit">g total</span></div>
                 <button id="mixGuideBtn" onclick="getMixGuide()">Get recipe</button>
             </div>
@@ -561,35 +620,87 @@
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
+    let mixTube1 = null, mixTube2 = null;
+    let compTube1 = null, compTube2 = null;
+    let guideTube = null;
+
+    function toggleTubePicker(pickerId) {
+        const picker = document.getElementById(pickerId);
+        const dropdown = picker.querySelector('.tube-picker-dropdown');
+        const isOpen = dropdown.classList.contains('open');
+        document.querySelectorAll('.tube-picker-dropdown.open').forEach(d => d.classList.remove('open'));
+        ttEl.style.display = 'none';
+        if (!isOpen) {
+            dropdown.classList.add('open');
+            const search = dropdown.querySelector('.tube-picker-search');
+            search.value = '';
+            renderTubePickerChips(dropdown.querySelector('.tube-picker-chips').id, '');
+            setTimeout(() => search.focus(), 0);
+        }
+    }
+
+    function filterTubePicker(input, chipsId) {
+        renderTubePickerChips(chipsId, input.value);
+    }
+
+    function renderTubePickerChips(chipsId, filter) {
+        const container = document.getElementById(chipsId);
+        const q = filter.toLowerCase();
+        let html = '';
+        allTubes.forEach(t => {
+            if (q && !t.tube.toLowerCase().includes(q)) return;
+            const esc = t.tube.replace(/'/g, "\\'");
+            const code = extractCode(t.tube) || '';
+            html += `<div class="shelf-chip" style="background:${t.hex}"
+                data-name="${stripCode(t.tube)}" data-code="${code}" data-hex="${t.hex}"
+                onclick="selectTubeForPicker('${chipsId}','${esc}','${t.hex}')"></div>`;
+        });
+        container.innerHTML = html;
+        container.onmouseover = e => { const c = e.target.closest('.shelf-chip'); if (c) showChipTooltip(c); };
+        container.onmouseleave = () => { ttEl.style.display = 'none'; };
+    }
+
+    function selectTubeForPicker(chipsId, tubeName, hex) {
+        const map = {
+            mixChips1:  { setVar: v => mixTube1  = v, swatch: 'mixSwatch1',  name: 'mixName1',  picker: 'mixPicker1' },
+            mixChips2:  { setVar: v => mixTube2  = v, swatch: 'mixSwatch2',  name: 'mixName2',  picker: 'mixPicker2' },
+            compChips1: { setVar: v => compTube1 = v, swatch: 'compSwatch1', name: 'compName1', picker: 'compPicker1' },
+            compChips2: { setVar: v => compTube2 = v, swatch: 'compSwatch2', name: 'compName2', picker: 'compPicker2' },
+            guideChips: { setVar: v => guideTube = v, swatch: 'guideSwatch', name:  'guideName', picker: 'guidePicker' },
+        };
+        const entry = map[chipsId];
+        if (!entry) return;
+        entry.setVar({tube: tubeName, hex});
+        document.getElementById(entry.swatch).style.background = hex;
+        const nameEl = document.getElementById(entry.name);
+        nameEl.textContent = stripCode(tubeName);
+        nameEl.classList.add('has-value');
+        document.getElementById(entry.picker).querySelector('.tube-picker-dropdown').classList.remove('open');
+        ttEl.style.display = 'none';
+    }
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.tube-picker')) {
+            document.querySelectorAll('.tube-picker-dropdown.open').forEach(d => d.classList.remove('open'));
+        }
+    });
+
     function randomizeMixColors() {
         const shuffled = [...allTubes].sort(() => Math.random() - 0.5);
         const [a, b] = shuffled.slice(0, 2);
-        document.getElementById('color1').value = a.hex;
-        document.getElementById('color1Hex').value = a.hex.toUpperCase();
-        document.getElementById('color2').value = b.hex;
-        document.getElementById('color2Hex').value = b.hex.toUpperCase();
+        selectTubeForPicker('mixChips1', a.tube, a.hex);
+        selectTubeForPicker('mixChips2', b.tube, b.hex);
     }
     randomizeMixColors();
 
-    document.getElementById('color1').addEventListener('input', e => { document.getElementById('color1Hex').value = e.target.value.toUpperCase(); });
-    document.getElementById('color2').addEventListener('input', e => { document.getElementById('color2Hex').value = e.target.value.toUpperCase(); });
-    document.getElementById('color1Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('color1').value = e.target.value; });
-    document.getElementById('color2Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('color2').value = e.target.value; });
     document.getElementById('promptInput').addEventListener('keydown', e => { if (e.key==='Enter') generatePalette(); });
-
-    document.getElementById('compColor1').addEventListener('input', e => { document.getElementById('compColor1Hex').value = e.target.value.toUpperCase(); });
-    document.getElementById('compColor2').addEventListener('input', e => { document.getElementById('compColor2Hex').value = e.target.value.toUpperCase(); });
-    document.getElementById('compColor1Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('compColor1').value = e.target.value; });
-    document.getElementById('compColor2Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('compColor2').value = e.target.value; });
-
-    document.getElementById('guideColor').addEventListener('input', e => { document.getElementById('guideColorHex').value = e.target.value.toUpperCase(); });
-    document.getElementById('guideColorHex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('guideColor').value = e.target.value; });
 
     let compSecondColorActive = false;
     function toggleSecondCompColor() {
         compSecondColorActive = !compSecondColorActive;
-        document.getElementById('compColor2Wrapper').style.display = compSecondColorActive ? 'flex' : 'none';
+        document.getElementById('compPicker2Wrapper').style.display = compSecondColorActive ? 'flex' : 'none';
         document.getElementById('compPlusToggle').style.display = compSecondColorActive ? 'none' : 'inline';
+        if (!compSecondColorActive) compTube2 = null;
     }
 
     function hexToRgb(hex) {
@@ -873,13 +984,16 @@
     }
 
     async function mixColors() {
-        const c1=document.getElementById('color1Hex').value, c2=document.getElementById('color2Hex').value;
-        if (!c1||!c2) return;
+        if (!mixTube1 || !mixTube2) {
+            document.getElementById('mixResult').className = 'mix-result active';
+            document.getElementById('mixResult').innerHTML = '<div class="error">Pick two Amsterdam tubes first.</div>';
+            return;
+        }
         const btn=document.getElementById('mixBtn'), result=document.getElementById('mixResult');
         btn.disabled=true; btn.textContent='Mixing...'; result.className='mix-result active';
         result.innerHTML='<div class="loading">Analyzing mix<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/mix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({color1:c1,color2:c2})});
+            const r = await fetch('/palette/mix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({color1:mixTube1.tube,color2:mixTube2.tube})});
             if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
             result.innerHTML=`<div class="mix-result-header"><div class="mix-color-preview" style="background:${data.result_hex}"></div>
@@ -916,9 +1030,12 @@
     }
 
     async function suggestComplement() {
-        const c1 = document.getElementById('compColor1Hex').value;
-        const colors = [c1];
-        if (compSecondColorActive) colors.push(document.getElementById('compColor2Hex').value);
+        if (!compTube1) {
+            document.getElementById('complementResult').innerHTML = '<div class="error">Pick at least one Amsterdam tube first.</div>';
+            return;
+        }
+        const colors = [compTube1.tube];
+        if (compSecondColorActive && compTube2) colors.push(compTube2.tube);
         const btn = document.getElementById('complementBtn'), result = document.getElementById('complementResult');
         btn.disabled = true; btn.textContent = 'Thinking...';
         result.innerHTML = '<div class="loading">Finding complements<span class="loading-dots"></span></div>';
@@ -978,13 +1095,15 @@
     }
 
     async function getMixGuide() {
-        const target = document.getElementById('guideColorHex').value;
-        if (!target) return;
+        if (!guideTube) {
+            document.getElementById('mixGuideResult').innerHTML = '<div class="error">Pick an Amsterdam tube first.</div>';
+            return;
+        }
         const btn = document.getElementById('mixGuideBtn'), result = document.getElementById('mixGuideResult');
         btn.disabled = true; btn.textContent = 'Thinking...';
         result.innerHTML = '<div class="loading">Working out the recipe<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/mix-guide', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target_color: target})});
+            const r = await fetch('/palette/mix-guide', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target_color: guideTube.tube, target_hex: guideTube.hex})});
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
             renderMixGuide(data);

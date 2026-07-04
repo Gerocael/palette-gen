@@ -16,6 +16,12 @@ llm = ChatAnthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY")
 )
 
+suggest_llm = ChatAnthropic(
+    model="claude-sonnet-5",
+    max_tokens=8192,
+    api_key=os.getenv("ANTHROPIC_API_KEY")
+)
+
 parser = JsonOutputParser()
 
 # --- Palette generation with LangGraph ---
@@ -231,40 +237,65 @@ No other text, no markdown. Just the JSON object."""),
     ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes. {base_instruction} Creative direction: {direction}. Be adventurous and avoid obvious combinations.")
 ])
 
-suggest_standard_chain = suggest_standard_prompt | llm | parser
-suggest_flood_chain = suggest_flood_prompt | llm | parser
+suggest_standard_chain = suggest_standard_prompt | suggest_llm | parser
+suggest_flood_chain = suggest_flood_prompt | suggest_llm | parser
+
+suggest_retry_prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a color palette expert. Your previous response was invalid JSON.
+Respond ONLY with a valid JSON object (no markdown, no code blocks, no extra text) containing a "palettes" array of 3 palettes.
+Each palette: name, mood, colors (array of 5), technique.
+Each color: hexCode (#RRGGBB), colorName, emotionalDescription, pourRatio (int, all 5 sum to 100), mixRecipe (array of {{tube, tubeHex, grams}}).
+IMPORTANT: Every tube in every mixRecipe MUST come from the user's tube list. Do not invent tubes."""),
+    ("human", "Tubes: {tubes}. Suggest 3 palettes. Previous error: {error}")
+])
+
+suggest_retry_chain = suggest_retry_prompt | suggest_llm | parser
 
 
 def suggest_from_shelf(tubes: list, base_tube: str | None = None, flood_mode: bool = False) -> dict:
     tube_list = ", ".join(tubes)
     direction = random.choice(CREATIVE_DIRECTIONS)
-    if flood_mode:
-        if base_tube:
-            base_instruction = (
-                f"I want to use '{base_tube}' as my flood base — it covers the entire canvas first. "
-                f"Choose 4 accent colors from my remaining tubes that contrast strongly against it. "
-                f"Mark '{base_tube}' with role 'base' and all other colors with role 'accent'."
-            )
-        else:
-            base_instruction = (
-                "You choose which of my tubes works best as the flood base color for each palette. "
-                "Mark it with role 'base' and the other 4 colors with role 'accent'. "
-                "Choose accents that contrast strongly against the base."
-            )
-        result = suggest_flood_chain.invoke({"tubes": tube_list, "direction": direction, "base_instruction": base_instruction})
-    else:
-        result = suggest_standard_chain.invoke({"tubes": tube_list, "direction": direction})
-    if isinstance(result, dict) and "palettes" in result:
-        valid = [p for p in result["palettes"] if len(p.get("colors", [])) >= 4]
-        return {"palettes": valid[:3]}
-    return {"palettes": []}
+
+    for attempt in range(3):
+        try:
+            if attempt == 0:
+                if flood_mode:
+                    if base_tube:
+                        base_instruction = (
+                            f"I want to use '{base_tube}' as my flood base — it covers the entire canvas first. "
+                            f"Choose 4 accent colors from my remaining tubes that contrast strongly against it. "
+                            f"Mark '{base_tube}' with role 'base' and all other colors with role 'accent'."
+                        )
+                    else:
+                        base_instruction = (
+                            "You choose which of my tubes works best as the flood base color for each palette. "
+                            "Mark it with role 'base' and the other 4 colors with role 'accent'. "
+                            "Choose accents that contrast strongly against the base."
+                        )
+                    result = suggest_flood_chain.invoke({"tubes": tube_list, "direction": direction, "base_instruction": base_instruction})
+                else:
+                    result = suggest_standard_chain.invoke({"tubes": tube_list, "direction": direction})
+            else:
+                result = suggest_retry_chain.invoke({"tubes": tube_list, "error": last_error})
+
+            if isinstance(result, dict) and "palettes" in result:
+                valid = [p for p in result["palettes"] if len(p.get("colors", [])) >= 4]
+                if valid:
+                    return {"palettes": valid[:3]}
+                last_error = "Palettes array was empty or all palettes had fewer than 4 colors"
+            else:
+                last_error = f"Response missing 'palettes' key, got: {list(result.keys()) if isinstance(result, dict) else type(result)}"
+        except Exception as e:
+            last_error = str(e)
+
+    raise Exception(f"Failed to suggest palettes after 3 attempts: {last_error}")
 
 
 # --- Color mixing with LangChain chain ---
 
 mix_prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a color mixing expert for acrylic pour painters.
-When given two hex colors, respond ONLY with a JSON object containing:
+    ("system", """You are a color mixing expert for acrylic pour painters using the Royal Talens Amsterdam Standard Series.
+When given two colors (either Amsterdam tube names like "Phthalo Blue 570" or hex codes), respond ONLY with a JSON object containing:
 - resultHex: the approximate hex code of the mixed color
 - resultName: a descriptive name for the mixed color
 - description: how this mix would look in an acrylic pour
@@ -323,7 +354,7 @@ def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = N
 
 mix_guide_prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a color mixing expert for acrylic pour painters using the Royal Talens Amsterdam Standard Series.
-Given a target hex color, work out the best mixing recipe to approximate it starting from basic tubes.
+Given a target color (either an Amsterdam tube name like "Phthalo Blue 570" or a hex code), work out the best mixing recipe to approximate it using Amsterdam Standard Series tubes.
 Respond ONLY with a JSON object containing:
 - colorName: if a single tube is a near-perfect match, use exactly that tube's name (e.g. "Titanium White 105"). Otherwise use a common descriptive name for the mixed result.
 - mixRecipe: an array of 2-4 ingredients (only use 1 if it's a near-perfect single-tube match) to combine, each with tube, tubeHex, grams. Use realistic relative proportions totaling around 20 — these are ratios the app will rescale to the user's desired batch size, so getting the proportions right matters more than the literal total.
