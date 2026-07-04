@@ -79,9 +79,10 @@
         .color-hex { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.5px; opacity: 0.85; margin-bottom: 4px; }
         .color-name { font-family: 'DM Serif Display', serif; font-size: 0.85rem; }
         .color-card .color-ratio, .color-card .color-hex, .color-card .color-name { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .download-wrapper { text-align: center; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .download-wrapper { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
         .download-btn { padding: 8px 16px; background: var(--surf-2); color: var(--tx-3); border: 1px solid var(--bd-m); border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer; }
         .download-btn:hover { background: var(--surf-h); color: var(--tx-2); border-color: var(--bd-h); }
+        .story-btn { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; padding: 8px 14px; }
         .variation-wrapper { text-align: center; margin-bottom: 12px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.05s; }
         .save-btn { padding: 10px 24px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 0.8rem; font-weight: 500; }
         .save-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
@@ -124,6 +125,22 @@
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
         input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
         .mix-plus { color: var(--tx-3); font-size: 1.2rem; }
+        .comp-plus-toggle { cursor: pointer; transition: color 0.15s; }
+        .comp-plus-toggle:hover { color: var(--tx-2); }
+        .comp-remove-toggle { color: var(--tx-3); font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
+        .comp-remove-toggle:hover { color: var(--tx-2); }
+        .comp-result-list { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; animation: fadeIn 0.4s ease forwards; }
+        .guide-total-wrapper { display: flex; align-items: center; gap: 6px; }
+        .guide-total-wrapper .config-unit { display: inline; margin-top: 0; }
+        .guide-steps { margin-top: 16px; }
+        .guide-steps ol { margin: 8px 0 0 20px; padding: 0; color: var(--tx-2); font-size: 0.85rem; line-height: 1.6; }
+        .color-behavior { font-size: 0.65rem; opacity: 0.7; margin-top: 2px; }
+        .pigment-order { font-size: 0.85rem; color: var(--tx-2); margin-bottom: 14px; line-height: 1.6; }
+        .pigment-order b { color: var(--tx-b); font-weight: 500; }
+        .pigment-note { font-size: 0.8rem; color: var(--tx-3); padding: 8px 0; border-bottom: 1px solid var(--bd-f); }
+        .pigment-note:last-child { border-bottom: none; }
+        .pigment-note-name { color: var(--tx-2); font-weight: 500; }
+        .pigment-warning { font-size: 0.8rem; color: var(--tx-2); line-height: 1.5; padding: 10px 12px; margin-top: 10px; border-left: 2px solid var(--err); background: var(--surf-2); border-radius: 4px; }
         .mix-shuffle-btn { padding: 10px 14px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 1.1rem; cursor: pointer; transition: all 0.2s; }
         .mix-shuffle-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); transform: none; }
         .mix-result { display: none; border-radius: 12px; overflow: hidden; animation: fadeIn 0.4s ease forwards; }
@@ -147,6 +164,7 @@
         #shelfTooltip .tt-code { font-size: 0.75rem; color: var(--tx-2); margin-bottom: 2px; }
         #shelfTooltip .tt-hex { font-size: 0.75rem; color: var(--tx-3); font-family: monospace; }
         .shelf-selected-count { font-size: 0.8rem; color: var(--tx-3); margin-bottom: 12px; }
+        .shelf-io-row { display: flex; gap: 8px; margin-bottom: 16px; }
         .base-picker-row { display: none; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
         .base-picker-label { font-size: 0.7rem; color: var(--tx-3); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
         .base-option { padding: 4px 10px; background: transparent; border: 1px solid var(--bd); border-radius: 20px; color: var(--tx-3); font-size: 0.75rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
@@ -189,6 +207,8 @@
         <span class="nav-brand">Palette Gen</span>
         <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
         <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
+        <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
+        <button class="nav-btn" onclick="showSection('mixGuideSection',this)">Mix Guide</button>
         <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
         <button class="nav-btn theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
     </div></nav>
@@ -236,6 +256,32 @@
             <div id="mixResult" class="mix-result"></div>
         </div>
         <div class="divider"></div>
+        <div class="section" id="complementSection">
+            <p class="section-title">Complementary colors</p>
+            <p class="section-desc">Pick 1-2 colors and let AI suggest more to round out the palette — mixed from Amsterdam tubes, or pulled straight from your shelf if you've selected one.</p>
+            <div class="mix-inputs">
+                <div class="color-input-wrapper"><input type="color" id="compColor1" value="#000000" /><input type="text" id="compColor1Hex" value="#000000" style="width:100px;" /></div>
+                <span class="mix-plus comp-plus-toggle" id="compPlusToggle" onclick="toggleSecondCompColor()" title="Add a second seed color">+</span>
+                <div class="color-input-wrapper" id="compColor2Wrapper" style="display:none;">
+                    <input type="color" id="compColor2" value="#000000" /><input type="text" id="compColor2Hex" value="#000000" style="width:100px;" />
+                    <span class="comp-remove-toggle" onclick="toggleSecondCompColor()" title="Remove second color">&times;</span>
+                </div>
+                <button id="complementBtn" onclick="suggestComplement()">Suggest</button>
+            </div>
+            <div id="complementResult"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="section" id="mixGuideSection">
+            <p class="section-title">Color mixing guide</p>
+            <p class="section-desc">Pick a target color and get a step-by-step Amsterdam Standard Series recipe to mix it, with gram amounts for your batch size.</p>
+            <div class="mix-inputs">
+                <div class="color-input-wrapper"><input type="color" id="guideColor" value="#000000" /><input type="text" id="guideColorHex" value="#000000" style="width:100px;" /></div>
+                <div class="guide-total-wrapper"><input type="number" class="cfg-num" id="guideTotalGrams" value="20" min="1" max="500" oninput="rescaleMixGuide()" /><span class="config-unit">g total</span></div>
+                <button id="mixGuideBtn" onclick="getMixGuide()">Get recipe</button>
+            </div>
+            <div id="mixGuideResult"></div>
+        </div>
+        <div class="divider"></div>
         <div class="section" id="shelfSection">
             <p class="section-title">Pour from my shelf</p>
             <p class="section-desc">Pick the Amsterdam tubes you own and get palette ideas you can actually make.</p>
@@ -244,6 +290,11 @@
             </div>
             <div class="shelf-chips" id="shelfChips"></div>
             <div class="shelf-selected-count" id="shelfCount">0 tubes selected</div>
+            <div class="shelf-io-row">
+                <button class="save-btn" onclick="exportShelf()">Export shelf</button>
+                <button class="save-btn" onclick="document.getElementById('shelfImportInput').click()">Import shelf</button>
+                <input type="file" id="shelfImportInput" accept="application/json" style="display:none" onchange="importShelf(event)" />
+            </div>
             <div class="base-picker-row" id="basePickerRow">
                 <span class="base-picker-label">Flood base</span>
                 <div id="baseOptions"></div>
@@ -270,7 +321,7 @@
     const scenes = ['sunset over the ocean','forest after rain','mountain lake at dawn','desert canyon','lavender field','coral reef','northern lights','cherry blossom garden','thunderstorm clouds','autumn vineyard','tropical jungle','frozen waterfall','wildflower meadow','volcanic landscape','moonlit beach','misty valley','bamboo forest','Mediterranean coast','tulip field at sunrise','deep cave crystals','prairie at golden hour','mangrove swamp'];
     document.getElementById('promptInput').value = `${moods[Math.floor(Math.random()*moods.length)]} ${scenes[Math.floor(Math.random()*scenes.length)]}`;
 
-    const ML_PER_CM2 = 0.17, PAINT_RATIO = 0.5, RESERVE = 1.2;
+    const ML_PER_CM2 = 0.17, PAINT_RATIO = 0.5, RESERVE = 1.2, FLOOD_MULTIPLIER = 2.5;
 
     // Amsterdam Standard Series — complete 102-colour set (source: official colour chart)
     const allTubes = [
@@ -446,6 +497,41 @@
         else selectedTubes.add(t);
         renderShelfChips();
     }
+
+    function exportShelf() {
+        const data = {
+            tubes: Array.from(selectedTubes),
+            baseColor: baseColor || null,
+            floodMode: floodMode
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const link = document.createElement('a');
+        link.download = 'my-shelf.json';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+
+    function importShelf(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const data = JSON.parse(reader.result);
+                const validTubeNames = new Set(allTubes.map(t => t.tube));
+                const tubes = (Array.isArray(data.tubes) ? data.tubes : []).filter(t => validTubeNames.has(t));
+                selectedTubes = new Set(tubes);
+                baseColor = (data.baseColor && selectedTubes.has(data.baseColor)) ? data.baseColor : null;
+                if (typeof data.floodMode === 'boolean' && data.floodMode !== floodMode) toggleFloodMode();
+                renderShelfChips();
+            } catch (e) {
+                alert('Invalid shelf file');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
     function updateShelfCount() {
         const c = selectedTubes.size;
         document.getElementById('shelfCount').textContent = `${c} tube${c===1?'':'s'} selected`;
@@ -491,6 +577,21 @@
     document.getElementById('color2Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('color2').value = e.target.value; });
     document.getElementById('promptInput').addEventListener('keydown', e => { if (e.key==='Enter') generatePalette(); });
 
+    document.getElementById('compColor1').addEventListener('input', e => { document.getElementById('compColor1Hex').value = e.target.value.toUpperCase(); });
+    document.getElementById('compColor2').addEventListener('input', e => { document.getElementById('compColor2Hex').value = e.target.value.toUpperCase(); });
+    document.getElementById('compColor1Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('compColor1').value = e.target.value; });
+    document.getElementById('compColor2Hex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('compColor2').value = e.target.value; });
+
+    document.getElementById('guideColor').addEventListener('input', e => { document.getElementById('guideColorHex').value = e.target.value.toUpperCase(); });
+    document.getElementById('guideColorHex').addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('guideColor').value = e.target.value; });
+
+    let compSecondColorActive = false;
+    function toggleSecondCompColor() {
+        compSecondColorActive = !compSecondColorActive;
+        document.getElementById('compColor2Wrapper').style.display = compSecondColorActive ? 'flex' : 'none';
+        document.getElementById('compPlusToggle').style.display = compSecondColorActive ? 'none' : 'inline';
+    }
+
     function hexToRgb(hex) {
         hex = hex.replace('#','');
         if (hex.length !== 6) return [0,0,0];
@@ -507,6 +608,12 @@
         return stripCode(color.name);
     }
 
+    function behaviorArrow(behavior) {
+        if (behavior === 'Sinks') return '&#8595;';
+        if (behavior === 'Suspends') return '&#8596;';
+        return '&#8593;';
+    }
+
     function getHexDisplay(color) {
         const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
         if (valid.length === 1) {
@@ -521,7 +628,8 @@
         const w = parseFloat(document.getElementById('cfgWidth').value)||0;
         const h = parseFloat(document.getElementById('cfgHeight').value)||0;
         if (w<=0||h<=0) return;
-        const totalMixed = Math.round(w*h*ML_PER_CM2*RESERVE);
+        const floodFactor = floodMode ? FLOOD_MULTIPLIER : 1;
+        const totalMixed = Math.round(w*h*ML_PER_CM2*RESERVE*floodFactor);
         const totalPaint = Math.round(totalMixed*PAINT_RATIO);
         const el = document.getElementById('cfgTotal');
         if (el) el.textContent = `${totalPaint}g paint + ${totalPaint}g medium`;
@@ -567,6 +675,72 @@
         link.href=canvas.toDataURL('image/png'); link.click();
     }
 
+    function roundedRectPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
+    }
+
+    function savePaletteAsStoryPng() {
+        if (!lastPalette) return;
+        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+        const W = 1080, H = 1920;
+        canvas.width = W; canvas.height = H;
+        ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f5f0eb'; ctx.font = 'bold 52px sans-serif';
+        ctx.fillText('Palette Gen', W/2, 130);
+        const subtitle = lastPalette.prompt || lastPalette.name || '';
+        if (subtitle) {
+            ctx.fillStyle = '#7a756f'; ctx.font = '30px sans-serif';
+            ctx.fillText(`"${subtitle}"`, W/2, 178);
+        }
+
+        const colors = lastPalette.colors;
+        const n = colors.length;
+        const marginX = 64, gap = 24, top = 240, bottom = 140, radius = 28;
+        const cardW = W - marginX * 2;
+        const cardH = (H - top - bottom - gap * (n - 1)) / n;
+
+        colors.forEach((color, i) => {
+            const y = top + i * (cardH + gap);
+            const tc = getTextColor(color.hex_code);
+            roundedRectPath(ctx, marginX, y, cardW, cardH, radius);
+            ctx.fillStyle = color.hex_code;
+            ctx.fill();
+
+            ctx.textAlign = 'left';
+            if (color.pour_ratio) {
+                ctx.fillStyle = tc; ctx.globalAlpha = 0.55; ctx.font = '600 26px sans-serif';
+                ctx.fillText(`${color.pour_ratio}%`, marginX + 32, y + 46);
+                ctx.globalAlpha = 1;
+            }
+            const displayName = getColorDisplayName(color);
+            ctx.fillStyle = tc; ctx.font = displayName.length > 20 ? 'bold 30px sans-serif' : 'bold 38px sans-serif';
+            ctx.fillText(displayName, marginX + 32, y + cardH - 46);
+            ctx.globalAlpha = 0.85; ctx.font = '500 26px sans-serif';
+            ctx.fillText(getHexDisplay(color), marginX + 32, y + cardH - 14);
+            ctx.globalAlpha = 1;
+        });
+
+        ctx.textAlign = 'center'; ctx.fillStyle = '#7a756f'; ctx.font = '26px sans-serif';
+        ctx.fillText('palette-gen-heti.onrender.com', W/2, H - 60);
+
+        const link = document.createElement('a');
+        link.download = `palette-story-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
     function variationOf(mod) { if (!lastPalette) return; document.getElementById('promptInput').value = `${lastPalette.prompt}, but ${mod}`; generatePalette(); }
 
     function renderPalette(data, targetId, showVariations) {
@@ -580,19 +754,25 @@
                 <button class="save-btn" onclick="variationOf('more pastel')">Pastel</button>
             </div>`;
         }
+        const pigmentNotes = (data.pigment_analysis && data.pigment_analysis.notes) || [];
         const numCols = data.colors.length;
         html += `<div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
-        data.colors.forEach(color => {
+        data.colors.forEach((color, i) => {
             const tc = getTextColor(color.hex_code);
             const isBase = color.role === 'base';
+            const note = pigmentNotes[i];
             html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
                 ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
                 ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
                 <div class="color-hex">${color.hex_code}</div>
+                ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
             </div>`;
         });
         html += '</div>';
-        html += `<div class="download-wrapper"><button class="download-btn" onclick="savePaletteAsPng()" title="Save as PNG">&#8681;</button></div>`;
+        html += `<div class="download-wrapper">
+            <button class="download-btn" onclick="savePaletteAsPng()" title="Save as PNG">&#8681;</button>
+            <button class="download-btn story-btn" onclick="savePaletteAsStoryPng()" title="Save as a 9:16 story image">9:16</button>
+        </div>`;
 
         const colorsWithRecipe = data.colors.map((color, i) => {
             const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
@@ -623,6 +803,21 @@
             });
             html += `<div class="recipe-grand-total"><span>Total paint</span><span id="recipeGrandTotal">${Math.round(grandTotal)}g</span></div>`;
             html += '<div class="recipe-disclaimer">These mixing recipes are AI-generated approximations based on color theory. Actual results will vary depending on paint consistency, pouring medium ratios, and pigment strength. Always test-mix a small amount first and adjust by eye.</div></div>';
+        }
+        if (data.pigment_analysis) {
+            const pa = data.pigment_analysis;
+            html += '<div class="recipe-section"><div class="recipe-heading">Pour order &amp; pigment notes</div>';
+            if (pa.pour_order && pa.pour_order.length > 0) {
+                html += `<div class="pigment-order">Suggested pour order, heaviest first (bottom of the cup): <b>${pa.pour_order.join('</b> → <b>')}</b></div>`;
+            }
+            (pa.notes||[]).forEach(n => {
+                if (n.mudding_risk) {
+                    html += `<div class="pigment-note"><span class="pigment-note-name">${n.color_name}</span> — ${n.behavior}. ${n.mudding_risk}</div>`;
+                }
+            });
+            (pa.warnings||[]).forEach(w => { html += `<div class="pigment-warning">${w}</div>`; });
+            html += '<div class="recipe-disclaimer">Density and tinting-strength ratings are estimated from each pigment’s general chemistry, not lab-measured — use as a starting guide and test in a cup first.</div>';
+            html += '</div>';
         }
         if (data.prompt) html += `<div class="prompt-label">"${data.prompt}"</div>`;
         if (data.technique) {
@@ -692,6 +887,109 @@
                 <div class="mix-result-desc">${data.description}</div><div class="mix-result-tip">${data.pour_tip}</div></div></div>`;
         } catch(err) { result.innerHTML=`<div class="error">${err.message}</div>`; }
         finally { btn.disabled=false; btn.textContent='Mix'; }
+    }
+
+    function renderComplementResult(colors) {
+        let html = '<div class="comp-result-list">';
+        colors.forEach(c => {
+            const valid = (c.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
+            let recipeHtml = '';
+            valid.forEach(ing => {
+                recipeHtml += `<div class="recipe-ingredient">
+                    <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
+                    <span class="recipe-tube">${ing.tube}</span>
+                    <span class="recipe-grams">${Math.round(ing.grams)}g</span>
+                </div>`;
+            });
+            html += `<div class="mix-result-header">
+                <div class="mix-color-preview" style="background:${c.hex_code}"></div>
+                <div class="mix-info">
+                    <div class="mix-result-name">${getColorDisplayName(c)}</div>
+                    <div class="mix-result-hex">${c.hex_code}</div>
+                    <div class="mix-result-desc">${c.description}</div>
+                    ${recipeHtml ? `<div class="recipe-ingredients">${recipeHtml}</div>` : ''}
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        document.getElementById('complementResult').innerHTML = html;
+    }
+
+    async function suggestComplement() {
+        const c1 = document.getElementById('compColor1Hex').value;
+        const colors = [c1];
+        if (compSecondColorActive) colors.push(document.getElementById('compColor2Hex').value);
+        const btn = document.getElementById('complementBtn'), result = document.getElementById('complementResult');
+        btn.disabled = true; btn.textContent = 'Thinking...';
+        result.innerHTML = '<div class="loading">Finding complements<span class="loading-dots"></span></div>';
+        try {
+            const r = await fetch('/palette/complement', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({colors, shelf_tubes:Array.from(selectedTubes)})});
+            if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
+            const data = await r.json();
+            renderComplementResult(data.colors);
+        } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
+        finally { btn.disabled = false; btn.textContent = 'Suggest'; }
+    }
+
+    let lastMixGuide = null;
+
+    function renderMixGuide(data) {
+        lastMixGuide = data;
+        let ingHtml = '';
+        (data.mix_recipe||[]).forEach((ing, j) => {
+            ingHtml += `<div class="recipe-ingredient">
+                <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
+                <span class="recipe-tube">${ing.tube}</span>
+                <span class="recipe-grams" id="guide-grams-${j}">${Math.round(ing.grams)}g</span>
+            </div>`;
+        });
+        let stepsHtml = '';
+        (data.steps||[]).forEach(s => { stepsHtml += `<li>${s}</li>`; });
+        let html = `<div class="mix-result-header">
+            <div class="mix-color-preview" style="background:${data.target_hex}"></div>
+            <div class="mix-info">
+                <div class="mix-result-name">${data.color_name}</div>
+                <div class="mix-result-hex">${data.target_hex}</div>
+            </div>
+        </div>
+        <div class="recipe-section">
+            <div class="recipe-heading">Mixing recipe</div>
+            <div class="recipe-ingredients">${ingHtml}</div>
+            <div class="recipe-grand-total"><span>Total paint</span><span id="guideGrandTotal">${Math.round(parseFloat(document.getElementById('guideTotalGrams').value)||0)}g</span></div>
+            ${stepsHtml ? `<div class="guide-steps"><div class="recipe-heading">Steps</div><ol>${stepsHtml}</ol></div>` : ''}
+            ${data.notes ? `<div class="recipe-disclaimer">${data.notes}</div>` : ''}
+        </div>`;
+        document.getElementById('mixGuideResult').innerHTML = html;
+        rescaleMixGuide();
+    }
+
+    function rescaleMixGuide() {
+        if (!lastMixGuide) return;
+        const total = parseFloat(document.getElementById('guideTotalGrams').value) || 0;
+        const recipe = lastMixGuide.mix_recipe || [];
+        const ratioSum = recipe.reduce((s, ing) => s + ing.grams, 0);
+        if (ratioSum <= 0) return;
+        recipe.forEach((ing, j) => {
+            const el = document.getElementById(`guide-grams-${j}`);
+            if (el) el.textContent = `${Math.round(ing.grams / ratioSum * total)}g`;
+        });
+        const gt = document.getElementById('guideGrandTotal');
+        if (gt) gt.textContent = `${Math.round(total)}g`;
+    }
+
+    async function getMixGuide() {
+        const target = document.getElementById('guideColorHex').value;
+        if (!target) return;
+        const btn = document.getElementById('mixGuideBtn'), result = document.getElementById('mixGuideResult');
+        btn.disabled = true; btn.textContent = 'Thinking...';
+        result.innerHTML = '<div class="loading">Working out the recipe<span class="loading-dots"></span></div>';
+        try {
+            const r = await fetch('/palette/mix-guide', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target_color: target})});
+            if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
+            const data = await r.json();
+            renderMixGuide(data);
+        } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
+        finally { btn.disabled = false; btn.textContent = 'Get recipe'; }
     }
 
     renderShelfChips();

@@ -26,7 +26,7 @@ AI-powered color palette generator for acrylic pour painters. Built around the R
 
 - **Frontend** — single-page HTML/CSS/JS, no framework
 - **Backend** — Python, FastAPI, Pydantic
-- **AI** — Anthropic Claude API (`claude-sonnet-4-6`) via LangChain + LangGraph (retry/validation loop)
+- **AI** — Anthropic Claude API (`claude-sonnet-5`) via LangChain + LangGraph (retry/validation loop)
 - **Colour data** — complete Amsterdam Standard Series (102 colours), sourced from official Royal Talens colour charts
 
 ---

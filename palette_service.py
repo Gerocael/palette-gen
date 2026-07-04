@@ -11,7 +11,7 @@ from typing import TypedDict
 load_dotenv()
 
 llm = ChatAnthropic(
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-5",
     max_tokens=4096,
     api_key=os.getenv("ANTHROPIC_API_KEY")
 )
@@ -278,3 +278,64 @@ mix_chain = mix_prompt | llm | parser
 
 def mix_colors(color1: str, color2: str) -> dict:
     return mix_chain.invoke({"color1": color1, "color2": color2})
+
+
+# --- Complementary color suggestions ---
+
+complement_prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a color palette expert for acrylic pour painters.
+The user has chosen {num_seed} seed color(s) for a pour palette and wants you to suggest exactly 3 additional colors that complement them (via contrast, harmony, or accent) to round out the palette.
+Respond ONLY with a JSON object containing a "colors" array of exactly 3 colors, each with:
+- hexCode: a valid hex color
+- colorName: if the mixRecipe uses only one tube, colorName MUST be exactly that tube's name (e.g. "Titanium White 105"). When mixing two or more tubes, use a commonly recognized color name for the mix.
+- emotionalDescription: one short sentence on why this color complements the seed color(s)
+- mixRecipe: an array of ingredients to mix using Royal Talens Amsterdam Standard Series acrylic tubes to approximate this color. Each ingredient has tube, tubeHex, grams (realistic amounts totaling 15-25g).
+{shelf_instruction}
+The 3 suggestions should not be near-duplicates of each other or of the seed color(s) — offer real variety.
+No other text, no markdown, no explanation. Just the JSON object."""),
+    ("human", "Seed color(s): {seed_colors}. Suggest 3 colors that complement them well for an acrylic pour palette.")
+])
+
+complement_chain = complement_prompt | llm | parser
+
+
+def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = None) -> dict:
+    seed_list = ", ".join(seed_colors)
+    if shelf_tubes:
+        tube_list = ", ".join(shelf_tubes)
+        shelf_instruction = (
+            f"The user owns these Amsterdam tubes: {tube_list}. Prefer mixRecipe combinations using ONLY these tubes. "
+            f"If one of their tubes is already close to ideal on its own, suggest it directly as a single-tube mixRecipe."
+        )
+    else:
+        shelf_instruction = "You may use any tube from the Amsterdam Standard Series."
+    result = complement_chain.invoke({
+        "num_seed": len(seed_colors),
+        "seed_colors": seed_list,
+        "shelf_instruction": shelf_instruction
+    })
+    if isinstance(result, dict) and "colors" in result:
+        return {"colors": result["colors"][:3]}
+    return {"colors": []}
+
+
+# --- Color mixing guide: reverse-engineer a target color from Amsterdam tubes ---
+
+mix_guide_prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a color mixing expert for acrylic pour painters using the Royal Talens Amsterdam Standard Series.
+Given a target hex color, work out the best mixing recipe to approximate it starting from basic tubes.
+Respond ONLY with a JSON object containing:
+- colorName: if a single tube is a near-perfect match, use exactly that tube's name (e.g. "Titanium White 105"). Otherwise use a common descriptive name for the mixed result.
+- mixRecipe: an array of 2-4 ingredients (only use 1 if it's a near-perfect single-tube match) to combine, each with tube, tubeHex, grams. Use realistic relative proportions totaling around 20 — these are ratios the app will rescale to the user's desired batch size, so getting the proportions right matters more than the literal total.
+- steps: an array of 3-5 short, plain-English instructions for physically mixing this recipe in order (e.g. start with the dominant/base color, add tinting colors gradually, when to test on a scrap surface, how to judge when it's ready).
+- notes: one sentence on how close this recipe gets to the target and an adjustment tip (e.g. add a touch more of X if it reads too warm).
+No other text, no markdown, no explanation. Just the JSON object."""),
+    ("human", "Target color: {target_color}. Give me a mixing recipe and step-by-step instructions to achieve this exact color with Amsterdam Standard Series acrylics.")
+])
+
+mix_guide_chain = mix_guide_prompt | llm | parser
+
+
+def generate_mix_guide(target_color: str) -> dict:
+    result = mix_guide_chain.invoke({"target_color": target_color})
+    return result if isinstance(result, dict) else {}

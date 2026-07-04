@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from palette_service import generate_palette, mix_colors, suggest_from_shelf
+from palette_service import generate_palette, mix_colors, suggest_from_shelf, suggest_complementary_colors, generate_mix_guide
+from pigment_analysis import analyze_palette_pigments
 from datetime import datetime, date, timezone
 
 app = FastAPI()
@@ -39,10 +40,23 @@ class Technique(BaseModel):
     reason: str
     tip: str
 
+class PigmentColorNote(BaseModel):
+    color_name: str
+    hex_code: str
+    density: str
+    behavior: str
+    mudding_risk: str | None = None
+
+class PigmentAnalysis(BaseModel):
+    pour_order: list[str]
+    notes: list[PigmentColorNote]
+    warnings: list[str]
+
 class PaletteResponse(BaseModel):
     prompt: str
     colors: list[Color]
     technique: Technique | None = None
+    pigment_analysis: PigmentAnalysis | None = None
 
 class ShelfRequest(BaseModel):
     tubes: list[str]
@@ -54,6 +68,7 @@ class SuggestedPalette(BaseModel):
     mood: str
     colors: list[Color]
     technique: Technique | None = None
+    pigment_analysis: PigmentAnalysis | None = None
 
 class SuggestResponse(BaseModel):
     palettes: list[SuggestedPalette]
@@ -69,6 +84,23 @@ class MixResponse(BaseModel):
     result_name: str
     description: str
     pour_tip: str
+
+class ComplementRequest(BaseModel):
+    colors: list[str]
+    shelf_tubes: list[str] = []
+
+class ComplementResponse(BaseModel):
+    colors: list[Color]
+
+class MixGuideRequest(BaseModel):
+    target_color: str
+
+class MixGuideResponse(BaseModel):
+    target_hex: str
+    color_name: str
+    mix_recipe: list[MixIngredient]
+    steps: list[str]
+    notes: str
 
 
 def build_colors(raw_colors):
@@ -139,7 +171,8 @@ def create_palette(request: PaletteRequest, req: Request):
         result = generate_palette(request.prompt, num_colors=max(3, min(5, request.num_colors)))
         colors = build_colors(result["colors"])
         technique = build_technique(result.get("technique"))
-        response = PaletteResponse(prompt=request.prompt, colors=colors, technique=technique)
+        pigment_analysis = analyze_palette_pigments(colors)
+        response = PaletteResponse(prompt=request.prompt, colors=colors, technique=technique, pigment_analysis=pigment_analysis)
         palette_history.append({
             "prompt": request.prompt,
             "palette": [c.model_dump() for c in colors],
@@ -168,7 +201,8 @@ def suggest_palettes(request: ShelfRequest, req: Request):
                 name=p.get("name", "Untitled"),
                 mood=p.get("mood", ""),
                 colors=colors,
-                technique=technique
+                technique=technique,
+                pigment_analysis=analyze_palette_pigments(colors)
             ))
         return SuggestResponse(palettes=palettes)
     except HTTPException:
@@ -192,6 +226,49 @@ def mix_palette_colors(request: MixRequest, req: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to mix colors: {str(e)}")
+
+@app.post("/palette/complement")
+def complement_colors(request: ComplementRequest, req: Request):
+    colors = [c.strip() for c in request.colors if c and c.strip()]
+    if not colors or len(colors) > 2:
+        raise HTTPException(status_code=400, detail="Provide 1 or 2 seed colors")
+    check_rate_limit(req.client.host, "complement")
+    try:
+        result = suggest_complementary_colors(colors, shelf_tubes=request.shelf_tubes)
+        return ComplementResponse(colors=build_colors(result.get("colors", [])))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to suggest complementary colors: {str(e)}")
+
+@app.post("/palette/mix-guide")
+def mix_guide(request: MixGuideRequest, req: Request):
+    target = request.target_color.strip()
+    if not target:
+        raise HTTPException(status_code=400, detail="Target color is required")
+    check_rate_limit(req.client.host, "mix_guide")
+    try:
+        result = generate_mix_guide(target)
+        color = build_colors([{
+            "hexCode": target,
+            "colorName": result.get("colorName", "Unknown"),
+            "mixRecipe": result.get("mixRecipe", [])
+        }])[0]
+        steps = result.get("steps") or []
+        if not isinstance(steps, list):
+            steps = []
+        steps = [str(s) for s in steps if s]
+        return MixGuideResponse(
+            target_hex=target,
+            color_name=color.name,
+            mix_recipe=color.mix_recipe or [],
+            steps=steps,
+            notes=str(result.get("notes") or "")
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate mixing guide: {str(e)}")
 
 @app.get("/")
 def serve_frontend():
