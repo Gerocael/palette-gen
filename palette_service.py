@@ -350,23 +350,95 @@ def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = N
     return {"colors": []}
 
 
-# --- Color mixing guide: reverse-engineer a target color from Amsterdam tubes ---
 
-mix_guide_prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a color mixing expert for acrylic pour painters using the Royal Talens Amsterdam Standard Series.
-Given a target color (either an Amsterdam tube name like "Phthalo Blue 570" or a hex code), work out the best mixing recipe to approximate it using Amsterdam Standard Series tubes.
+# --- Mix from primaries: approximate any Amsterdam tube using only the 5 primaries ---
+
+
+_PRIMARIES_HEX = {
+    "Primary Yellow 275":  "#F4C800",
+    "Primary Magenta 369": "#C41E7F",
+    "Primary Cyan 572":    "#0093C8",
+    "Oxide Black 735":     "#2C2420",
+    "Titanium White 105":  "#FAFAFA",
+}
+
+def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
+    """Compute primary paint recipe from a hex color using CMYK decomposition."""
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
+
+    r = int(h[0:2], 16) / 255.0
+    g = int(h[2:4], 16) / 255.0
+    b = int(h[4:6], 16) / 255.0
+
+    max_rgb = max(r, g, b)
+    min_rgb = min(r, g, b)
+
+    if max_rgb < 0.04:
+        return [{"tube": "Oxide Black 735", "tubeHex": "#2C2420", "grams": total_grams}]
+    if min_rgb > 0.96:
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
+
+    # CMYK decomposition
+    k = 1.0 - max_rgb
+    c = (1.0 - r - k) / max_rgb
+    m = (1.0 - g - k) / max_rgb
+    y = (1.0 - b - k) / max_rgb
+
+    # White for desaturated / pastel colours
+    saturation = (max_rgb - min_rgb) / max_rgb
+    white = max(0.0, (1.0 - saturation) * max_rgb * 0.7)
+
+    components = [
+        ("Primary Yellow 275",  y),
+        ("Primary Magenta 369", m),
+        ("Primary Cyan 572",    c),
+        ("Oxide Black 735",     k),
+        ("Titanium White 105",  white),
+    ]
+
+    total = sum(v for _, v in components)
+    if total == 0:
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
+
+    result = []
+    for name, amount in components:
+        grams = round(amount / total * total_grams, 1)
+        if grams >= 0.5:
+            result.append({"tube": name, "tubeHex": _PRIMARIES_HEX[name], "grams": grams})
+
+    return sorted(result, key=lambda x: x["grams"], reverse=True)
+
+
+primaries_notes_prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a color mixing expert for acrylic pour painters.
+The user has a computed mixing recipe. Write practical guidance for it.
 Respond ONLY with a JSON object containing:
-- colorName: if a single tube is a near-perfect match, use exactly that tube's name (e.g. "Titanium White 105"). Otherwise use a common descriptive name for the mixed result.
-- mixRecipe: an array of 2-4 ingredients (only use 1 if it's a near-perfect single-tube match) to combine, each with tube, tubeHex, grams. Use realistic relative proportions totaling around 20 — these are ratios the app will rescale to the user's desired batch size, so getting the proportions right matters more than the literal total.
-- steps: an array of 3-5 short, plain-English instructions for physically mixing this recipe in order (e.g. start with the dominant/base color, add tinting colors gradually, when to test on a scrap surface, how to judge when it's ready).
-- notes: one sentence on how close this recipe gets to the target and an adjustment tip (e.g. add a touch more of X if it reads too warm).
-No other text, no markdown, no explanation. Just the JSON object."""),
-    ("human", "Target color: {target_color}. Give me a mixing recipe and step-by-step instructions to achieve this exact color with Amsterdam Standard Series acrylics.")
+- steps: array of 3-4 concise plain-English steps for physically mixing these paints in order (start with the largest amount, add smaller amounts gradually, test on scrap)
+- notes: one honest sentence on how close this approximation gets to the real tube and what pigment character is lost (transparency, single-pigment chroma, special effects)
+No other text. Just the JSON."""),
+    ("human", "Target colour: {target_tube}. Recipe: {recipe_desc}. Write mixing steps and a note on accuracy.")
 ])
 
-mix_guide_chain = mix_guide_prompt | llm | parser
+primaries_notes_chain = primaries_notes_prompt | llm | parser
 
 
-def generate_mix_guide(target_color: str) -> dict:
-    result = mix_guide_chain.invoke({"target_color": target_color})
-    return result if isinstance(result, dict) else {}
+def generate_primary_mix(target_tube: str, target_hex: str = "") -> dict:
+    recipe = hex_to_primaries(target_hex or "#888888")
+    recipe_desc = ", ".join(f"{ing['tube']} {ing['grams']}g" for ing in recipe)
+    try:
+        ai = primaries_notes_chain.invoke({"target_tube": target_tube, "recipe_desc": recipe_desc})
+        if not isinstance(ai, dict):
+            ai = {}
+    except Exception:
+        ai = {}
+    steps = ai.get("steps") or []
+    if not isinstance(steps, list):
+        steps = []
+    return {
+        "mixRecipe": recipe,
+        "steps": [str(s) for s in steps if s],
+        "notes": str(ai.get("notes") or ""),
+        "targetHex": target_hex,
+    }

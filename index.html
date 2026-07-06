@@ -217,7 +217,7 @@
         <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
         <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
         <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
-        <button class="nav-btn" onclick="showSection('mixGuideSection',this)">Mix Guide</button>
+        <button class="nav-btn" onclick="showSection('primariesSection',this)">Primaries</button>
         <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
         <button class="nav-btn theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
     </div></nav>
@@ -320,27 +320,26 @@
             <div id="complementResult"></div>
         </div>
         <div class="divider"></div>
-        <div class="section" id="mixGuideSection">
-            <p class="section-title">Color mixing guide</p>
-            <p class="section-desc">Pick a target color and get a step-by-step Amsterdam Standard Series recipe to mix it, with gram amounts for your batch size.</p>
+        <div class="section" id="primariesSection">
+            <p class="section-title">Mix from primaries</p>
+            <p class="section-desc">Pick any Amsterdam tube and get a recipe using only the 5 primaries: Yellow 275, Magenta 369, Cyan 572, White 105, Oxide Black 735.</p>
             <div class="mix-inputs">
-                <div class="tube-picker" id="guidePicker">
-                    <div class="tube-picker-trigger" onclick="toggleTubePicker('guidePicker')">
-                        <div class="tube-picker-swatch" id="guideSwatch"></div>
-                        <span class="tube-picker-name" id="guideName">Pick a tube…</span>
+                <div class="tube-picker" id="primariesPicker">
+                    <div class="tube-picker-trigger" onclick="toggleTubePicker('primariesPicker')">
+                        <div class="tube-picker-swatch" id="primariesSwatch"></div>
+                        <span class="tube-picker-name" id="primariesName">Pick a target tube…</span>
                         <span class="tube-picker-caret">▾</span>
                     </div>
-                    <div class="tube-picker-dropdown" id="guideDropdown">
-                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'guideChips')" />
-                        <div class="tube-picker-chips" id="guideChips"></div>
+                    <div class="tube-picker-dropdown" id="primariesDropdown">
+                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'primariesChips')" />
+                        <div class="tube-picker-chips" id="primariesChips"></div>
                     </div>
                 </div>
-                <div class="guide-total-wrapper"><input type="number" class="cfg-num" id="guideTotalGrams" value="20" min="1" max="500" oninput="rescaleMixGuide()" /><span class="config-unit">g total</span></div>
-                <button id="mixGuideBtn" onclick="getMixGuide()">Get recipe</button>
+                <div class="guide-total-wrapper"><input type="number" class="cfg-num" id="primariesTotalGrams" value="20" min="1" max="500" oninput="rescalePrimaries()" /><span class="config-unit">g total</span></div>
+                <button id="primariesBtn" onclick="getPrimariesMix()">Get recipe</button>
             </div>
-            <div id="mixGuideResult"></div>
+            <div id="primariesResult"></div>
         </div>
-        <div class="divider"></div>
         <div class="section" id="shelfSection">
             <p class="section-title">Pour from my shelf</p>
             <p class="section-desc">Pick the Amsterdam tubes you own and get palette ideas you can actually make.</p>
@@ -622,7 +621,7 @@
 
     let mixTube1 = null, mixTube2 = null;
     let compTube1 = null, compTube2 = null;
-    let guideTube = null;
+    let primariesTube = null, lastPrimariesMix = null;
 
     function toggleTubePicker(pickerId) {
         const picker = document.getElementById(pickerId);
@@ -666,7 +665,7 @@
             mixChips2:  { setVar: v => mixTube2  = v, swatch: 'mixSwatch2',  name: 'mixName2',  picker: 'mixPicker2' },
             compChips1: { setVar: v => compTube1 = v, swatch: 'compSwatch1', name: 'compName1', picker: 'compPicker1' },
             compChips2: { setVar: v => compTube2 = v, swatch: 'compSwatch2', name: 'compName2', picker: 'compPicker2' },
-            guideChips: { setVar: v => guideTube = v, swatch: 'guideSwatch', name:  'guideName', picker: 'guidePicker' },
+            primariesChips: { setVar: v => primariesTube = v, swatch: 'primariesSwatch', name: 'primariesName', picker: 'primariesPicker' },
         };
         const entry = map[chipsId];
         if (!entry) return;
@@ -1048,65 +1047,58 @@
         finally { btn.disabled = false; btn.textContent = 'Suggest'; }
     }
 
-    let lastMixGuide = null;
-
-    function renderMixGuide(data) {
-        lastMixGuide = data;
-        let ingHtml = '';
-        (data.mix_recipe||[]).forEach((ing, j) => {
-            ingHtml += `<div class="recipe-ingredient">
-                <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
-                <span class="recipe-tube">${ing.tube}</span>
-                <span class="recipe-grams" id="guide-grams-${j}">${Math.round(ing.grams)}g</span>
-            </div>`;
-        });
-        let stepsHtml = '';
-        (data.steps||[]).forEach(s => { stepsHtml += `<li>${s}</li>`; });
-        let html = `<div class="mix-result-header">
-            <div class="mix-color-preview" style="background:${data.target_hex}"></div>
-            <div class="mix-info">
-                <div class="mix-result-name">${data.color_name}</div>
-                <div class="mix-result-hex">${data.target_hex}</div>
-            </div>
-        </div>
-        <div class="recipe-section">
-            <div class="recipe-heading">Mixing recipe</div>
-            <div class="recipe-ingredients">${ingHtml}</div>
-            <div class="recipe-grand-total"><span>Total paint</span><span id="guideGrandTotal">${Math.round(parseFloat(document.getElementById('guideTotalGrams').value)||0)}g</span></div>
-            ${stepsHtml ? `<div class="guide-steps"><div class="recipe-heading">Steps</div><ol>${stepsHtml}</ol></div>` : ''}
-            ${data.notes ? `<div class="recipe-disclaimer">${data.notes}</div>` : ''}
-        </div>`;
-        document.getElementById('mixGuideResult').innerHTML = html;
-        rescaleMixGuide();
-    }
-
-    function rescaleMixGuide() {
-        if (!lastMixGuide) return;
-        const total = parseFloat(document.getElementById('guideTotalGrams').value) || 0;
-        const recipe = lastMixGuide.mix_recipe || [];
+    function rescalePrimaries() {
+        if (!lastPrimariesMix) return;
+        const total = parseFloat(document.getElementById('primariesTotalGrams').value) || 0;
+        const recipe = lastPrimariesMix.mix_recipe || [];
         const ratioSum = recipe.reduce((s, ing) => s + ing.grams, 0);
         if (ratioSum <= 0) return;
         recipe.forEach((ing, j) => {
-            const el = document.getElementById(`guide-grams-${j}`);
+            const el = document.getElementById(`primaries-grams-${j}`);
             if (el) el.textContent = `${Math.round(ing.grams / ratioSum * total)}g`;
         });
-        const gt = document.getElementById('guideGrandTotal');
+        const gt = document.getElementById('primariesGrandTotal');
         if (gt) gt.textContent = `${Math.round(total)}g`;
     }
 
-    async function getMixGuide() {
-        if (!guideTube) {
-            document.getElementById('mixGuideResult').innerHTML = '<div class="error">Pick an Amsterdam tube first.</div>';
+    async function getPrimariesMix() {
+        if (!primariesTube) {
+            document.getElementById('primariesResult').innerHTML = '<div class="error">Pick a target Amsterdam tube first.</div>';
             return;
         }
-        const btn = document.getElementById('mixGuideBtn'), result = document.getElementById('mixGuideResult');
+        const btn = document.getElementById('primariesBtn'), result = document.getElementById('primariesResult');
         btn.disabled = true; btn.textContent = 'Thinking...';
-        result.innerHTML = '<div class="loading">Working out the recipe<span class="loading-dots"></span></div>';
+        result.innerHTML = '<div class="loading">Working out the primary mix<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/mix-guide', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target_color: guideTube.tube, target_hex: guideTube.hex})});
+            const r = await fetch('/palette/mix-primaries', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target_tube: primariesTube.tube, target_hex: primariesTube.hex})});
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
-            renderMixGuide(data);
+            lastPrimariesMix = data;
+            let ingHtml = '';
+            (data.mix_recipe||[]).forEach((ing, j) => {
+                ingHtml += `<div class="recipe-ingredient">
+                    <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
+                    <span class="recipe-tube">${ing.tube}</span>
+                    <span class="recipe-grams" id="primaries-grams-${j}">${Math.round(ing.grams)}g</span>
+                </div>`;
+            });
+            let stepsHtml = '';
+            (data.steps||[]).forEach(s => { stepsHtml += `<li>${s}</li>`; });
+            result.innerHTML = `<div class="mix-result-header">
+                <div class="mix-color-preview" style="background:${data.target_hex}"></div>
+                <div class="mix-info">
+                    <div class="mix-result-name">${data.color_name}</div>
+                    <div class="mix-result-hex">${data.target_hex}</div>
+                </div>
+            </div>
+            <div class="recipe-section">
+                <div class="recipe-heading">Primary recipe</div>
+                <div class="recipe-ingredients">${ingHtml}</div>
+                <div class="recipe-grand-total"><span>Total paint</span><span id="primariesGrandTotal">${Math.round(parseFloat(document.getElementById('primariesTotalGrams').value)||0)}g</span></div>
+                ${stepsHtml ? `<div class="guide-steps"><div class="recipe-heading">Steps</div><ol>${stepsHtml}</ol></div>` : ''}
+                ${data.notes ? `<div class="recipe-disclaimer">${data.notes}</div>` : ''}
+            </div>`;
+            rescalePrimaries();
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Get recipe'; }
     }

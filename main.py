@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from palette_service import generate_palette, mix_colors, suggest_from_shelf, suggest_complementary_colors, generate_mix_guide
+from palette_service import generate_palette, mix_colors, suggest_from_shelf, suggest_complementary_colors, generate_primary_mix
 from pigment_analysis import analyze_palette_pigments
 from datetime import datetime, date, timezone
 
@@ -91,10 +91,6 @@ class ComplementRequest(BaseModel):
 
 class ComplementResponse(BaseModel):
     colors: list[Color]
-
-class MixGuideRequest(BaseModel):
-    target_color: str
-    target_hex: str = ""
 
 class MixGuideResponse(BaseModel):
     target_hex: str
@@ -242,18 +238,23 @@ def complement_colors(request: ComplementRequest, req: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to suggest complementary colors: {str(e)}")
 
-@app.post("/palette/mix-guide")
-def mix_guide(request: MixGuideRequest, req: Request):
-    target = request.target_color.strip()
+
+class PrimariesMixRequest(BaseModel):
+    target_tube: str
+    target_hex: str = ""
+
+@app.post("/palette/mix-primaries")
+def mix_from_primaries(request: PrimariesMixRequest, req: Request):
+    target = request.target_tube.strip()
     if not target:
-        raise HTTPException(status_code=400, detail="Target color is required")
-    check_rate_limit(req.client.host, "mix_guide")
+        raise HTTPException(status_code=400, detail="Target tube is required")
+    check_rate_limit(req.client.host, "primaries")
     try:
-        result = generate_mix_guide(target)
-        display_hex = request.target_hex or result.get("targetHex", target)
+        result = generate_primary_mix(target, target_hex=request.target_hex)
+        display_hex = request.target_hex or result.get("targetHex", "#888888")
         color = build_colors([{
             "hexCode": display_hex,
-            "colorName": result.get("colorName", "Unknown"),
+            "colorName": target,
             "mixRecipe": result.get("mixRecipe", [])
         }])[0]
         steps = result.get("steps") or []
@@ -262,7 +263,7 @@ def mix_guide(request: MixGuideRequest, req: Request):
         steps = [str(s) for s in steps if s]
         return MixGuideResponse(
             target_hex=display_hex,
-            color_name=color.name,
+            color_name=target,
             mix_recipe=color.mix_recipe or [],
             steps=steps,
             notes=str(result.get("notes") or "")
@@ -270,7 +271,7 @@ def mix_guide(request: MixGuideRequest, req: Request):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate mixing guide: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate primaries recipe: {str(e)}")
 
 @app.get("/")
 def serve_frontend():
