@@ -827,8 +827,7 @@
             const ty=y+swatchH-20;
             ctx.fillStyle=tc; ctx.globalAlpha=0.85; ctx.font='500 13px sans-serif'; ctx.fillText(getHexDisplay(color),x+14,ty-22);
             ctx.globalAlpha=1; ctx.font='bold 14px sans-serif';
-            const displayName = getColorDisplayName(color);
-            // Wrap long names in PNG
+            const displayName = color.name || getColorDisplayName(color);
             if (displayName.length > 18) { ctx.font='bold 11px sans-serif'; }
             ctx.fillText(displayName,x+14,ty); ctx.globalAlpha=1;
         });
@@ -887,7 +886,7 @@
                 ctx.fillText(`${color.pour_ratio}%`, marginX + 32, y + 46);
                 ctx.globalAlpha = 1;
             }
-            const displayName = getColorDisplayName(color);
+            const displayName = color.name || getColorDisplayName(color);
             ctx.fillStyle = tc; ctx.font = displayName.length > 20 ? 'bold 30px sans-serif' : 'bold 38px sans-serif';
             ctx.fillText(displayName, marginX + 32, y + cardH - 46);
             ctx.globalAlpha = 0.85; ctx.font = '500 26px sans-serif';
@@ -922,13 +921,14 @@
         html += `<div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
         data.colors.forEach((color, i) => {
             const tc = getTextColor(color.hex_code);
-            const isBase = color.role === 'base';
+            const isFlood = color.role === 'base' && !allowBaseSelect;
+            const isSaved = (color.role === 'locked') || (color.role === 'base' && allowBaseSelect);
             const note = pigmentNotes[i];
-            const showToggle = allowBaseSelect && !isBase;
-            const safeName = color.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+            const showToggle = allowBaseSelect && !isSaved;
             html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
-                ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
-                ${showToggle ? `<button class="gen-base-toggle" data-hex="${color.hex_code}" data-name="${safeName}" onclick="toggleGenBase(this)">Base</button>` : ''}
+                ${isFlood ? `<div class="color-base-label">Flood</div>` : ''}
+                ${isSaved ? `<div class="color-base-label">Saved</div>` : ''}
+                ${showToggle ? `<button class="gen-base-toggle" data-idx="${i}" onclick="toggleLockColor(this)">Save</button>` : ''}
                 ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
                 <div class="color-hex">${color.hex_code}</div>
                 ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
@@ -940,7 +940,7 @@
             <button class="download-btn story-btn" onclick="savePaletteAsStoryPng()" title="Save as a 9:16 story image">9:16</button>
         </div>`;
         if (allowBaseSelect) {
-            html += `<div id="genRefloodRow" class="gen-reflood-row" style="display:none"><button class="save-btn" onclick="regenerateWithFlood()">Regenerate with flood base</button></div>`;
+            html += `<div class="gen-reflood-row"><button class="save-btn" onclick="regenerateGen()">Regenerate</button></div>`;
         }
 
         const colorsWithRecipe = data.colors.map((color, i) => {
@@ -1001,34 +1001,42 @@
         calculatePaintNeeded();
     }
 
-    let genFloodBases = [];
+    let lockedColors = [];
 
-    function toggleGenBase(btn) {
-        const hex = btn.dataset.hex;
-        const name = btn.dataset.name;
-        const idx = genFloodBases.findIndex(b => b.hex === hex);
-        if (idx >= 0) {
-            genFloodBases.splice(idx, 1);
+    function toggleLockColor(btn) {
+        const idx = parseInt(btn.dataset.idx);
+        const color = lastPalette.colors[idx];
+        const lockedIdx = lockedColors.findIndex(c => c.hex_code === color.hex_code);
+        if (lockedIdx >= 0) {
+            lockedColors.splice(lockedIdx, 1);
             btn.classList.remove('active');
         } else {
-            if (genFloodBases.length >= 2) return;
-            genFloodBases.push({hex, name});
+            if (lockedColors.length >= cfgNumColors - 1) return;
+            lockedColors.push(color);
             btn.classList.add('active');
         }
-        const row = document.getElementById('genRefloodRow');
-        if (row) row.style.display = genFloodBases.length > 0 ? '' : 'none';
     }
 
-    async function doGenerate(prompt, baseColors) {
+    async function doGenerate(prompt, baseColorsHints) {
         const btn = document.getElementById('generateBtn'), result = document.getElementById('paletteResult');
         btn.disabled = true; btn.textContent = 'Generating...';
         result.innerHTML = '<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
+        const prevLocked = lockedColors.slice();
         try {
-            const r = await fetch('/palette/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt, num_colors: cfgNumColors, base_colors: baseColors||[]})});
+            const r = await fetch('/palette/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt, num_colors: cfgNumColors, base_colors: baseColorsHints||[]})});
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
+            if (prevLocked.length > 0) {
+                data.colors = data.colors.map(c => {
+                    if (c.role === 'base') {
+                        const orig = prevLocked.find(lc => lc.hex_code === c.hex_code);
+                        if (orig) return {...orig, role: 'locked'};
+                    }
+                    return c;
+                });
+            }
             lastPalette = data;
-            genFloodBases = [];
+            lockedColors = [];
             renderPalette(data, 'paletteResult', true, true);
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Generate'; }
@@ -1040,10 +1048,10 @@
         await doGenerate(prompt, []);
     }
 
-    async function regenerateWithFlood() {
+    async function regenerateGen() {
         const prompt = document.getElementById('promptInput').value.trim();
-        if (!prompt || genFloodBases.length === 0) return;
-        await doGenerate(prompt, genFloodBases);
+        if (!prompt) return;
+        await doGenerate(prompt, lockedColors.map(c => ({hex: c.hex_code, name: c.name})));
     }
 
     let suggestedPalettes = [];
