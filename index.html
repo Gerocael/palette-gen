@@ -84,7 +84,9 @@
         .export-dropdown { position: relative; }
         .export-trigger { padding: 7px 13px; background: var(--surf-2); color: var(--tx-2); border: 1px solid var(--bd-m); border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
         .export-trigger:hover { background: var(--surf-h); border-color: var(--bd-h); }
-        .export-menu { position: absolute; left: 50%; transform: translateX(-50%); top: calc(100% + 6px); z-index: 100; background: var(--surf); border: 1px solid var(--bd-m); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); min-width: 170px; overflow: hidden; }
+        .export-menu { display: none; position: absolute; left: 50%; transform: translateX(-50%); top: 100%; padding-top: 4px; z-index: 100; }
+        .export-menu-inner { background: var(--surf); border: 1px solid var(--bd-m); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); min-width: 170px; overflow: hidden; }
+        .export-dropdown:hover .export-menu { display: block; }
         .export-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; background: none; border: none; color: var(--tx-2); font-size: 0.82rem; text-align: left; cursor: pointer; }
         .export-menu button:hover { background: var(--surf-h); }
         .export-menu .menu-label { font-weight: 600; }
@@ -564,7 +566,7 @@
         renderBasePicker();
         calculatePaintNeeded();
         if (lastPalette && document.getElementById('paletteResult').innerHTML.trim()) {
-            renderPalette(lastPalette, 'paletteResult', true, true);
+            renderPalette(lastPalette, 'paletteResult', true, isFirstGen);
         }
     }
 
@@ -762,9 +764,7 @@
         if (!e.target.closest('.tube-picker')) {
             document.querySelectorAll('.tube-picker-dropdown.open').forEach(d => d.classList.remove('open'));
         }
-        if (!e.target.closest('.export-dropdown')) {
-            document.querySelectorAll('.export-menu').forEach(m => m.style.display = 'none');
-        }
+
     });
 
     function randomizeMixColors() {
@@ -979,12 +979,12 @@
             const allSaved = (lockedColors.length + genBases.length) >= data.colors.length;
             html += `<button class="regen-btn" onclick="regenerateGen()" style="${allSaved ? 'display:none' : ''}">Regenerate</button>`;
         }
-        html += `<div class="export-dropdown" onmouseleave="this.querySelector('.export-menu').style.display='none'">
-            <button class="export-trigger" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">&#8681; Download</button>
-            <div class="export-menu" style="display:none">
-                <button onclick="savePaletteAsPng();this.closest('.export-menu').style.display='none'"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square color swatches</span></span></button>
-                <button onclick="savePaletteAsStoryPng();this.closest('.export-menu').style.display='none'"><span>&#128247;</span><span><span class="menu-label">Story (9:16)</span><br><span class="menu-desc">Vertical for Instagram</span></span></button>
-            </div>
+        html += `<div class="export-dropdown">
+            <button class="export-trigger">&#8681; Download</button>
+            <div class="export-menu"><div class="export-menu-inner">
+                <button onclick="savePaletteAsPng()"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square color swatches</span></span></button>
+                <button onclick="savePaletteAsStoryPng()"><span>&#128247;</span><span><span class="menu-label">Story (9:16)</span><br><span class="menu-desc">Vertical for Instagram</span></span></button>
+            </div></div>
         </div>`;
         html += `</div>`;
 
@@ -1077,6 +1077,7 @@
 
     let lockedColors = [];
     let genBases = [];
+    let isFirstGen = true;
 
     function updateRegenBtn() {
         if (!lastPalette) return;
@@ -1146,7 +1147,7 @@
             lastPalette = data;
             genBases = data.colors.filter(c => c.role === 'base').map(c => ({...c}));
             lockedColors = data.colors.filter(c => c.role === 'locked').map(c => ({...c}));
-            renderPalette(data, 'paletteResult', true, true);
+            renderPalette(data, 'paletteResult', true, isFirstGen);
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Generate'; }
     }
@@ -1154,13 +1155,14 @@
     async function generatePalette() {
         const prompt = document.getElementById('promptInput').value.trim();
         if (!prompt) { document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>'; return; }
-        genBases = []; lockedColors = [];
+        genBases = []; lockedColors = []; isFirstGen = true;
         await doGenerate(prompt, []);
     }
 
     async function regenerateGen() {
         const prompt = document.getElementById('promptInput').value.trim();
         if (!prompt) return;
+        isFirstGen = false;
         const seen = new Set();
         const hints = [];
         for (const c of [...genBases, ...lockedColors]) {
