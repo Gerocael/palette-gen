@@ -976,7 +976,8 @@
         html += `</div></div>`; // close palette-col + palette-row
         html += `<div class="palette-action-row">`;
         if (allowBaseSelect) {
-            html += `<button class="regen-btn" onclick="regenerateGen()">Regenerate</button>`;
+            const allSaved = (lockedColors.length + genBases.length) >= data.colors.length;
+            html += `<button class="regen-btn" onclick="regenerateGen()" style="${allSaved ? 'display:none' : ''}">Regenerate</button>`;
         }
         html += `<div class="export-dropdown" onmouseleave="this.querySelector('.export-menu').style.display='none'">
             <button class="export-trigger" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">&#8681; Download</button>
@@ -1077,6 +1078,12 @@
     let lockedColors = [];
     let genBases = [];
 
+    function updateRegenBtn() {
+        if (!lastPalette) return;
+        const btn = document.querySelector('.palette-action-row .regen-btn');
+        if (btn) btn.style.display = (lockedColors.length + genBases.length >= lastPalette.colors.length) ? 'none' : '';
+    }
+
     function toggleLockColor(btn) {
         const idx = parseInt(btn.dataset.idx);
         const color = lastPalette.colors[idx];
@@ -1090,6 +1097,7 @@
         }
         btn.classList.toggle('active', willLock);
         btn.textContent = willLock ? '★' : '☆';
+        updateRegenBtn();
     }
 
     function toggleGenBaseBtn(btn) {
@@ -1111,6 +1119,7 @@
         document.querySelectorAll('.gen-base-btn').forEach(b => {
             b.style.display = (maxed && !b.classList.contains('active')) ? 'none' : '';
         });
+        updateRegenBtn();
     }
 
     async function doGenerate(prompt, baseColorsHints) {
