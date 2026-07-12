@@ -79,10 +79,18 @@
         .color-hex { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.5px; opacity: 0.85; margin-bottom: 4px; }
         .color-name { font-family: 'DM Serif Display', serif; font-size: 0.85rem; }
         .color-card .color-ratio, .color-card .color-hex, .color-card .color-name { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .download-wrapper { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
-        .download-btn { padding: 8px 16px; background: var(--surf-2); color: var(--tx-3); border: 1px solid var(--bd-m); border-radius: 6px; font-size: 1rem; line-height: 1; cursor: pointer; }
-        .download-btn:hover { background: var(--surf-h); color: var(--tx-2); border-color: var(--bd-h); }
-        .story-btn { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; padding: 8px 14px; }
+        .palette-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 16px; }
+        .palette-row .palette-grid { flex: 1; margin-bottom: 0; }
+        .palette-side { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .export-dropdown { position: relative; }
+        .export-trigger { width: 30px; height: 30px; background: var(--surf-2); color: var(--tx-3); border: 1px solid var(--bd-m); border-radius: 6px; cursor: pointer; font-size: 1rem; line-height: 1; }
+        .export-trigger:hover { background: var(--surf-h); color: var(--tx-2); }
+        .export-menu { position: absolute; right: 0; top: 36px; z-index: 100; background: var(--surf); border: 1px solid var(--bd-m); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); min-width: 130px; overflow: hidden; }
+        .export-menu button { display: block; width: 100%; padding: 9px 14px; background: none; border: none; color: var(--tx-2); font-size: 0.82rem; text-align: left; cursor: pointer; }
+        .export-menu button:hover { background: var(--surf-h); }
+        .palette-regen-row { margin: 0 0 10px; text-align: center; }
+        .palette-regen-row button { padding: 9px 28px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+        .palette-regen-row button:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
         .variation-wrapper { text-align: center; margin-bottom: 12px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.05s; }
         .save-btn { padding: 10px 24px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 0.8rem; font-weight: 500; }
         .save-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
@@ -235,7 +243,7 @@
 <body>
     <div id="shelfTooltip"><div class="tt-name" id="ttName"></div><div class="tt-code" id="ttCode"></div><div class="tt-hex" id="ttHex"></div></div>
     <nav class="nav"><div class="nav-inner">
-        <span class="nav-brand">Palette Gen</span>
+        <a class="nav-brand" href="/" style="text-decoration:none;color:inherit">Palette Gen</a>
         <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
         <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
         <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
@@ -535,6 +543,9 @@
         if (!floodMode) floodBases = [];
         renderBasePicker();
         calculatePaintNeeded();
+        if (lastPalette && document.getElementById('paletteResult').innerHTML.trim()) {
+            renderPalette(lastPalette, 'paletteResult', true, true);
+        }
     }
 
     const ttEl = document.getElementById('shelfTooltip');
@@ -731,6 +742,9 @@
         if (!e.target.closest('.tube-picker')) {
             document.querySelectorAll('.tube-picker-dropdown.open').forEach(d => d.classList.remove('open'));
         }
+        if (!e.target.closest('.export-dropdown')) {
+            document.querySelectorAll('.export-menu').forEach(m => m.style.display = 'none');
+        }
     });
 
     function randomizeMixColors() {
@@ -923,13 +937,13 @@
         }
         const pigmentNotes = (data.pigment_analysis && data.pigment_analysis.notes) || [];
         const numCols = data.colors.length;
-        html += `<div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
+        html += `<div class="palette-row"><div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
         data.colors.forEach((color, i) => {
             const tc = getTextColor(color.hex_code);
             const note = pigmentNotes[i];
             if (allowBaseSelect) {
-                const isSaved = lockedColors.some(lc => lc.hex_code === color.hex_code);
-                const isBase = genBases.some(b => b.hex_code === color.hex_code);
+                const isSaved = lockedColors.some(lc => lc.hex_code.toLowerCase() === color.hex_code.toLowerCase());
+                const isBase = genBases.some(b => b.hex_code.toLowerCase() === color.hex_code.toLowerCase());
                 html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
                     ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
                     <button class="color-save-star${isSaved ? ' active' : ''}" data-idx="${i}" onclick="toggleLockColor(this)">${isSaved ? '★' : '☆'}</button>
@@ -948,12 +962,16 @@
                 </div>`;
             }
         });
-        html += '</div>';
-        html += `<div class="download-wrapper">
-            <button class="download-btn" onclick="savePaletteAsPng()" title="Save as PNG">&#8681;</button>
-            ${allowBaseSelect ? `<button class="download-btn regen-btn" onclick="regenerateGen()">Regenerate</button>` : ''}
-            <button class="download-btn story-btn" onclick="savePaletteAsStoryPng()" title="Save as a 9:16 story image">9:16</button>
-        </div>`;
+        html += `</div><div class="palette-side"><div class="export-dropdown">
+            <button class="export-trigger" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'" title="Export">&#8942;</button>
+            <div class="export-menu" style="display:none">
+                <button onclick="savePaletteAsPng();this.closest('.export-menu').style.display='none'">&#8681; PNG</button>
+                <button onclick="savePaletteAsStoryPng();this.closest('.export-menu').style.display='none'">9:16 Story</button>
+            </div>
+        </div></div></div>`;
+        if (allowBaseSelect) {
+            html += `<div class="palette-regen-row"><button onclick="regenerateGen()">Regenerate</button></div>`;
+        }
 
         const colorsWithRecipe = data.colors.map((color, i) => {
             const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
@@ -1023,7 +1041,7 @@
     function toggleLockColor(btn) {
         const idx = parseInt(btn.dataset.idx);
         const color = lastPalette.colors[idx];
-        const lockedIdx = lockedColors.findIndex(c => c.hex_code === color.hex_code);
+        const lockedIdx = lockedColors.findIndex(c => c.hex_code.toLowerCase() === color.hex_code.toLowerCase());
         const willLock = lockedIdx < 0;
         if (willLock) {
             if (lockedColors.length >= cfgNumColors - 1) return;
@@ -1038,7 +1056,7 @@
     function toggleGenBaseBtn(btn) {
         const idx = parseInt(btn.dataset.idx);
         const color = lastPalette.colors[idx];
-        const baseIdx = genBases.findIndex(b => b.hex_code === color.hex_code);
+        const baseIdx = genBases.findIndex(b => b.hex_code.toLowerCase() === color.hex_code.toLowerCase());
         const willBase = baseIdx < 0;
         if (willBase) {
             if (genBases.length >= 2) return;
@@ -1071,9 +1089,9 @@
             if (prevLocked.length > 0 || prevGenBases.length > 0) {
                 data.colors = data.colors.map(c => {
                     if (c.role === 'base') {
-                        const wasBase = prevGenBases.find(b => b.hex_code === c.hex_code);
+                        const wasBase = prevGenBases.find(b => b.hex_code.toLowerCase() === c.hex_code.toLowerCase());
                         if (wasBase) return {...wasBase, role: 'base'};
-                        const wasLocked = prevLocked.find(l => l.hex_code === c.hex_code);
+                        const wasLocked = prevLocked.find(l => l.hex_code.toLowerCase() === c.hex_code.toLowerCase());
                         if (wasLocked) return {...wasLocked, role: 'locked'};
                     }
                     return c;
