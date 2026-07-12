@@ -954,7 +954,7 @@
                 html += `<div class="recipe-row">
                     <div class="recipe-swatch" style="background:${color.hex_code}"></div>
                     <div class="recipe-ingredients">
-                        <div class="recipe-color-name">${getColorDisplayName(color)}</div>
+                        <div class="recipe-color-name">${color.name}</div>
                         ${ingHtml}
                     </div>
                 </div>`;
@@ -1008,7 +1008,7 @@
         btn.disabled=true; btn.textContent='Thinking...';
         result.innerHTML='<div class="loading">Finding palettes from your shelf<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tubes:Array.from(selectedTubes),base_tube:floodBases[0]||null,flood_mode:floodMode,num_colors:cfgNumColors})});
+            const r = await fetch('/palette/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tubes:Array.from(selectedTubes),base_tubes:floodBases,flood_mode:floodMode,num_colors:cfgNumColors})});
             if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json(); suggestedPalettes = data.palettes;
             let html = '';

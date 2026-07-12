@@ -60,7 +60,8 @@ class PaletteResponse(BaseModel):
 
 class ShelfRequest(BaseModel):
     tubes: list[str]
-    base_tube: str | None = None
+    base_tubes: list[str] = []
+    base_tube: str | None = None  # backwards compat — superseded by base_tubes
     flood_mode: bool = False
     num_colors: int = 5
 
@@ -191,7 +192,8 @@ def suggest_palettes(request: ShelfRequest, req: Request):
         raise HTTPException(status_code=400, detail="Please add at least 2 tubes to your shelf")
     check_rate_limit(req.client.host, "suggest")
     try:
-        result = suggest_from_shelf(request.tubes, base_tube=request.base_tube, flood_mode=request.flood_mode, num_colors=max(3, min(5, request.num_colors)))
+        base_tubes = request.base_tubes or ([request.base_tube] if request.base_tube else [])
+        result = suggest_from_shelf(request.tubes, base_tubes=base_tubes, flood_mode=request.flood_mode, num_colors=max(3, min(5, request.num_colors)))
         palettes = []
         for p in result.get("palettes", []):
             colors = build_colors(p.get("colors", []))

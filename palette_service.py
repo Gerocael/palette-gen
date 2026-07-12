@@ -212,13 +212,13 @@ No other text, no markdown. Just the JSON object."""),
 
 suggest_flood_prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a color palette expert for acrylic pour painters who use a flood-and-accent technique.
-The user floods their entire canvas with one dominant base color first, then adds {num_accents} accent colors on top for contrast and interest.
+The user floods their canvas with {num_bases} base color(s) first, then adds {num_accents} accent colors on top for contrast and interest.
 The user gives you a list of Royal Talens Amsterdam Standard Series tubes they own.
 Suggest exactly 3 distinct pour palettes using ONLY those tubes. Each palette MUST explore a completely different mood, style, and color range.
 IMPORTANT RULES:
-- Each palette has exactly {num_colors} colors: 1 base and {num_accents} accents.
-- The base color floods the entire canvas first — it must be a strong, intentional color.
-- The {num_accents} accent colors must contrast strongly against the base. No accent should visually disappear into the base.
+- Each palette has exactly {num_colors} colors: {num_bases} base(s) and {num_accents} accents.
+- Base colors flood the canvas — they must be strong, intentional colors.
+- The {num_accents} accent colors must contrast strongly against the base(s). No accent should visually disappear into a base.
 - Every palette must span at least 3 clearly distinct hue families.
 - Mix 2-4 tubes per color for interesting intermediary tones. Only use a single tube when it is a perfect match.
 - Every tube in every mixRecipe MUST come from the user's provided list. Do not invent tubes they do not own.
@@ -229,12 +229,12 @@ Respond ONLY with a JSON object containing a "palettes" array of 3 palettes. Eac
   - hexCode: a valid hex color
   - colorName: if the mixRecipe uses only one tube, MUST be exactly that tube's name. If mixed, use a recognized color name.
   - emotionalDescription: the mood this color evokes
-  - role: "base" for the flood color (exactly one per palette), "accent" for all others
-  - pourRatio: percentage in the pour as a whole number (all {num_colors} add to 100). Base must be 50-70%. Accents share the remainder.
+  - role: "base" for flood colors (exactly {num_bases} per palette), "accent" for all others
+  - pourRatio: percentage in the pour as a whole number (all {num_colors} add to 100). Each base 30-60%, accents share the remainder.
   - mixRecipe: array of ingredients using ONLY tubes from the user's list. Each has tube, tubeHex, grams. Base totals 40-60g, each accent totals 10-20g.
 - "technique": an object with name, reason, and tip specific to the flood-and-accent style
 No other text, no markdown. Just the JSON object."""),
-    ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes with exactly {num_colors} colors each (1 base + {num_accents} accents). {base_instruction} Creative direction: {direction}. Be adventurous and avoid obvious combinations.")
+    ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes with exactly {num_colors} colors each ({num_bases} base(s) + {num_accents} accents). {base_instruction} Creative direction: {direction}. Be adventurous and avoid obvious combinations.")
 ])
 
 suggest_standard_chain = suggest_standard_prompt | suggest_llm | parser
@@ -252,28 +252,38 @@ IMPORTANT: Every tube in every mixRecipe MUST come from the user's tube list. Do
 suggest_retry_chain = suggest_retry_prompt | suggest_llm | parser
 
 
-def suggest_from_shelf(tubes: list, base_tube: str | None = None, flood_mode: bool = False, num_colors: int = 5) -> dict:
+def suggest_from_shelf(tubes: list, base_tubes: list | None = None, flood_mode: bool = False, num_colors: int = 5) -> dict:
     tube_list = ", ".join(tubes)
     direction = random.choice(CREATIVE_DIRECTIONS)
-    num_accents = num_colors - 1
+    base_tubes = base_tubes or []
+    num_bases = max(1, len(base_tubes)) if flood_mode else 0
+    num_accents = num_colors - num_bases
 
     for attempt in range(3):
         try:
             if attempt == 0:
                 if flood_mode:
-                    if base_tube:
-                        base_instruction = (
-                            f"I want to use '{base_tube}' as my flood base — it covers the entire canvas first. "
-                            f"Choose {num_accents} accent colors from my remaining tubes that contrast strongly against it. "
-                            f"Mark '{base_tube}' with role 'base' and all other colors with role 'accent'."
-                        )
-                    else:
+                    if not base_tubes:
                         base_instruction = (
                             f"You choose which of my tubes works best as the flood base color for each palette. "
                             f"Mark it with role 'base' and the other {num_accents} colors with role 'accent'. "
                             f"Choose accents that contrast strongly against the base."
                         )
-                    result = suggest_flood_chain.invoke({"tubes": tube_list, "direction": direction, "base_instruction": base_instruction, "num_colors": num_colors, "num_accents": num_accents})
+                    elif len(base_tubes) == 1:
+                        base_instruction = (
+                            f"I want to use '{base_tubes[0]}' as my flood base — it covers the entire canvas first. "
+                            f"Choose {num_accents} accent colors from my remaining tubes that contrast strongly against it. "
+                            f"Mark '{base_tubes[0]}' with role 'base' and all other colors with role 'accent'."
+                        )
+                    else:
+                        base_list = " and ".join(f"'{b}'" for b in base_tubes)
+                        base_instruction = (
+                            f"I want to use {base_list} as my {num_bases} flood bases — they cover the canvas in sections (split canvas). "
+                            f"Mark all {num_bases} of them with role 'base'. "
+                            f"Choose {num_accents} accent colors that work harmoniously across both bases and contrast meaningfully against at least one. "
+                            f"Mark all accents with role 'accent'."
+                        )
+                    result = suggest_flood_chain.invoke({"tubes": tube_list, "direction": direction, "base_instruction": base_instruction, "num_colors": num_colors, "num_accents": num_accents, "num_bases": num_bases})
                 else:
                     result = suggest_standard_chain.invoke({"tubes": tube_list, "direction": direction, "num_colors": num_colors})
             else:
