@@ -89,7 +89,7 @@
         .export-menu button:hover { background: var(--surf-h); }
         .export-menu .menu-label { font-weight: 600; }
         .export-menu .menu-desc { font-size: 0.72rem; color: var(--tx-3); }
-        .palette-action-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 0 0 12px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
+        .palette-action-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 0 0 12px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; position: relative; z-index: 50; }
         .palette-action-row .regen-btn { padding: 9px 24px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
         .palette-action-row .regen-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
         .recipe-pct { font-size: 0.75rem; color: var(--tx-3); min-width: 34px; text-align: right; flex-shrink: 0; }
@@ -978,7 +978,7 @@
         if (allowBaseSelect) {
             html += `<button class="regen-btn" onclick="regenerateGen()">Regenerate</button>`;
         }
-        html += `<div class="export-dropdown">
+        html += `<div class="export-dropdown" onmouseleave="this.querySelector('.export-menu').style.display='none'">
             <button class="export-trigger" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">&#8681; Download</button>
             <div class="export-menu" style="display:none">
                 <button onclick="savePaletteAsPng();this.closest('.export-menu').style.display='none'"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square color swatches</span></span></button>
