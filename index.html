@@ -83,11 +83,13 @@
         .palette-row .palette-grid { flex: 1; margin-bottom: 0; }
         .palette-side { display: flex; flex-direction: column; align-items: center; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
         .export-dropdown { position: relative; }
-        .export-trigger { width: 30px; height: 30px; background: var(--surf-2); color: var(--tx-3); border: 1px solid var(--bd-m); border-radius: 6px; cursor: pointer; font-size: 1rem; line-height: 1; }
-        .export-trigger:hover { background: var(--surf-h); color: var(--tx-2); }
-        .export-menu { position: absolute; right: 0; top: 36px; z-index: 100; background: var(--surf); border: 1px solid var(--bd-m); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); min-width: 130px; overflow: hidden; }
-        .export-menu button { display: block; width: 100%; padding: 9px 14px; background: none; border: none; color: var(--tx-2); font-size: 0.82rem; text-align: left; cursor: pointer; }
+        .export-trigger { padding: 7px 13px; background: var(--surf-2); color: var(--tx-2); border: 1px solid var(--bd-m); border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+        .export-trigger:hover { background: var(--surf-h); border-color: var(--bd-h); }
+        .export-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 100; background: var(--surf); border: 1px solid var(--bd-m); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); min-width: 170px; overflow: hidden; }
+        .export-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; background: none; border: none; color: var(--tx-2); font-size: 0.82rem; text-align: left; cursor: pointer; }
         .export-menu button:hover { background: var(--surf-h); }
+        .export-menu .menu-label { font-weight: 600; }
+        .export-menu .menu-desc { font-size: 0.72rem; color: var(--tx-3); }
         .palette-regen-row { margin: 0 0 10px; text-align: center; }
         .palette-regen-row button { padding: 9px 28px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
         .palette-regen-row button:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
@@ -208,12 +210,15 @@
         .suggest-card-swatch.is-base::after { content: 'FLOOD'; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 0.45rem; font-weight: 700; letter-spacing: 0.8px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
         .suggest-card-body { padding: 16px 20px; }
         .color-base-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.65; margin-bottom: 4px; }
-        .color-save-star { position: absolute; top: 6px; right: 8px; font-size: 1.15rem; line-height: 1; background: none; border: none; cursor: pointer; color: inherit; opacity: 0.3; padding: 2px; transition: opacity 0.15s, transform 0.1s; }
-        .color-save-star:hover { opacity: 0.65; }
-        .color-save-star.active { opacity: 1; transform: scale(1.1); }
-        .gen-base-btn { position: absolute; top: 30px; right: 8px; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.15); color: inherit; border: 1px solid rgba(255,255,255,0.28); cursor: pointer; opacity: 0.45; transition: opacity 0.15s; }
-        .gen-base-btn:hover { opacity: 0.85; }
-        .gen-base-btn.active { background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.7); opacity: 1; }
+        .palette-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .palette-controls { display: grid; margin-top: 6px; gap: 4px; }
+        .color-ctrl { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 2px 0; }
+        .color-save-star { font-size: 1.1rem; background: none; border: none; cursor: pointer; color: var(--tx-3); padding: 3px 5px; transition: color 0.15s; line-height: 1; }
+        .color-save-star:hover { color: var(--tx-2); }
+        .color-save-star.active { color: var(--tx-b); }
+        .gen-base-btn { font-size: 0.72rem; font-weight: 600; padding: 3px 9px; border-radius: 4px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
+        .gen-base-btn:hover { color: var(--tx-2); border-color: var(--bd-h); }
+        .gen-base-btn.active { background: var(--surf-3); color: var(--tx); border-color: var(--bd-h); }
         .regen-btn { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px; padding: 8px 14px; }
         .show-mix-btn { width: 100%; padding: 10px; margin-bottom: 8px; background: var(--surf); border: 1px solid var(--bd-m); border-radius: 8px; color: var(--tx-3); font-size: 0.8rem; cursor: pointer; text-align: center; }
         .show-mix-btn:hover { background: var(--surf-h); color: var(--tx-2); }
@@ -842,7 +847,6 @@
             const x=i*sw, y=headerH;
             ctx.fillStyle=color.hex_code; ctx.fillRect(x,y,sw,swatchH);
             const tc=getTextColor(color.hex_code);
-            if (color.pour_ratio) { ctx.fillStyle=tc; ctx.globalAlpha=0.5; ctx.font='500 14px sans-serif'; ctx.fillText(`${color.pour_ratio}%`,x+14,y+24); ctx.globalAlpha=1; }
             const ty=y+swatchH-20;
             ctx.fillStyle=tc; ctx.globalAlpha=0.85; ctx.font='500 13px sans-serif'; ctx.fillText(getHexDisplay(color),x+14,ty-22);
             ctx.globalAlpha=1; ctx.font='bold 14px sans-serif';
@@ -900,11 +904,6 @@
             ctx.fill();
 
             ctx.textAlign = 'left';
-            if (color.pour_ratio) {
-                ctx.fillStyle = tc; ctx.globalAlpha = 0.55; ctx.font = '600 26px sans-serif';
-                ctx.fillText(`${color.pour_ratio}%`, marginX + 32, y + 46);
-                ctx.globalAlpha = 1;
-            }
             const displayName = color.name || getColorDisplayName(color);
             ctx.fillStyle = tc; ctx.font = displayName.length > 20 ? 'bold 30px sans-serif' : 'bold 38px sans-serif';
             ctx.fillText(displayName, marginX + 32, y + cardH - 46);
@@ -937,36 +936,30 @@
         }
         const pigmentNotes = (data.pigment_analysis && data.pigment_analysis.notes) || [];
         const numCols = data.colors.length;
-        html += `<div class="palette-row"><div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
+        html += `<div class="palette-row"><div class="palette-col"><div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
         data.colors.forEach((color, i) => {
             const tc = getTextColor(color.hex_code);
             const note = pigmentNotes[i];
-            if (allowBaseSelect) {
+            html += `<div class="color-card" style="background:${color.hex_code};color:${tc}"><div class="color-hex">${color.hex_code}</div></div>`;
+        });
+        html += `</div>`; // close palette-grid
+        if (allowBaseSelect) {
+            html += `<div class="palette-controls" style="grid-template-columns:repeat(${numCols},1fr)">`;
+            data.colors.forEach((color, i) => {
                 const isSaved = lockedColors.some(lc => lc.hex_code.toLowerCase() === color.hex_code.toLowerCase());
                 const isBase = genBases.some(b => b.hex_code.toLowerCase() === color.hex_code.toLowerCase());
-                html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
-                    ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
+                html += `<div class="color-ctrl">
                     <button class="color-save-star${isSaved ? ' active' : ''}" data-idx="${i}" onclick="toggleLockColor(this)">${isSaved ? '★' : '☆'}</button>
-                    ${floodMode ? `<button class="gen-base-btn${isBase ? ' active' : ''}" data-idx="${i}" onclick="toggleGenBaseBtn(this)">Base</button>` : ''}
-                    ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
-                    <div class="color-hex">${color.hex_code}</div>
-                    ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
+                    ${floodMode ? `<button class="gen-base-btn${isBase ? ' active' : ''}" data-idx="${i}" onclick="toggleGenBaseBtn(this)">Flood</button>` : ''}
                 </div>`;
-            } else {
-                const isBase = color.role === 'base';
-                html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
-                    ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
-                    ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
-                    <div class="color-hex">${color.hex_code}</div>
-                    ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
-                </div>`;
-            }
-        });
+            });
+            html += `</div>`;
+        }
         html += `</div><div class="palette-side"><div class="export-dropdown">
-            <button class="export-trigger" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'" title="Export">&#8942;</button>
+            <button class="export-trigger" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">&#8681; Download</button>
             <div class="export-menu" style="display:none">
-                <button onclick="savePaletteAsPng();this.closest('.export-menu').style.display='none'">&#8681; PNG</button>
-                <button onclick="savePaletteAsStoryPng();this.closest('.export-menu').style.display='none'">9:16 Story</button>
+                <button onclick="savePaletteAsPng();this.closest('.export-menu').style.display='none'"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square color swatches</span></span></button>
+                <button onclick="savePaletteAsStoryPng();this.closest('.export-menu').style.display='none'"><span>&#128247;</span><span><span class="menu-label">Story (9:16)</span><br><span class="menu-desc">Vertical for Instagram</span></span></button>
             </div>
         </div></div></div>`;
         if (allowBaseSelect) {
@@ -1016,9 +1009,8 @@
                 html += `<div class="pigment-order">Suggested pour order, heaviest first (bottom of the cup): <b>${pa.pour_order.join('</b> → <b>')}</b></div>`;
             }
             (pa.notes||[]).forEach(n => {
-                if (n.mudding_risk) {
-                    html += `<div class="pigment-note"><span class="pigment-note-name">${n.color_name}</span> — ${n.behavior}. ${n.mudding_risk}</div>`;
-                }
+                const extra = n.mudding_risk ? `. ${n.mudding_risk}` : '';
+                html += `<div class="pigment-note"><span class="pigment-note-name">${n.color_name}</span> — ${n.behavior}${extra}</div>`;
             });
             (pa.warnings||[]).forEach(w => { html += `<div class="pigment-warning">${w}</div>`; });
             html += '<div class="recipe-disclaimer">Density and tinting-strength ratings are estimated from each pigment’s general chemistry, not lab-measured — use as a starting guide and test in a cup first.</div>';
@@ -1065,15 +1057,10 @@
             genBases.splice(baseIdx, 1);
         }
         btn.classList.toggle('active', willBase);
-        const card = btn.closest('.color-card');
-        let label = card.querySelector('.color-base-label');
-        if (willBase) {
-            if (!label) { label = document.createElement('div'); label.className = 'color-base-label'; card.prepend(label); }
-            label.textContent = 'Flood';
-            label.style.display = '';
-        } else if (label) {
-            label.style.display = 'none';
-        }
+        const maxed = genBases.length >= 2;
+        document.querySelectorAll('.gen-base-btn').forEach(b => {
+            b.style.display = (maxed && !b.classList.contains('active')) ? 'none' : '';
+        });
     }
 
     async function doGenerate(prompt, baseColorsHints) {
