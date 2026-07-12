@@ -64,6 +64,25 @@ Example:
 palette_chain = palette_prompt | llm | parser
 retry_chain = retry_prompt | llm | parser
 
+palette_flood_prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a color palette expert for acrylic pour painters.
+The user has pre-selected {num_bases} flood base color(s). Add {num_accents} accent color(s) that harmonize for a split canvas pour.
+
+Respond ONLY with a JSON object with:
+1. "colors": exactly {num_colors} total. Include the base color(s) first (role="base", keep their hex exactly as given), then {num_accents} new accent colors (role="accent"). Each color:
+   - hexCode: valid 7-char hex (use exact provided hex for base colors; choose harmonious hex for accents)
+   - colorName: if single-tube mix, MUST be exactly that tube's name (e.g. "Titanium White 105"); if multi-tube, use a recognized color name
+   - emotionalDescription: mood evoked
+   - pourRatio: percentage (all {num_colors} must sum to 100; base colors typically 25–40% each)
+   - role: "base" or "accent"
+   - mixRecipe: Amsterdam Standard Series ingredients (tube, tubeHex, grams; 15–25g total per color)
+2. "technique": {{name, reason, tip}} suited to a split canvas pour.
+No other text. Just the JSON."""),
+    ("human", "Palette mood: {prompt}\nBase colors:\n{base_color_desc}\nAdd {num_accents} accent color(s) that complement these for a split canvas pour.")
+])
+
+palette_flood_chain = palette_flood_prompt | llm | parser
+
 HEX_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 REQUIRED_KEYS = {"hexCode", "colorName", "emotionalDescription"}
 
@@ -71,6 +90,7 @@ REQUIRED_KEYS = {"hexCode", "colorName", "emotionalDescription"}
 class PaletteState(TypedDict):
     prompt: str
     num_colors: int
+    base_colors: list
     colors: list
     is_valid: bool
     error: str
@@ -79,8 +99,23 @@ class PaletteState(TypedDict):
 
 def generate(state: PaletteState) -> dict:
     nc = state.get("num_colors", 5)
+    base_colors = state.get("base_colors") or []
     try:
-        if state["attempts"] == 0:
+        if base_colors:
+            num_bases = len(base_colors)
+            num_accents = max(1, nc - num_bases)
+            base_desc = "\n".join(
+                f"- {b.get('name', 'Color')} ({b.get('hex', '#888888')})"
+                for b in base_colors
+            )
+            result = palette_flood_chain.invoke({
+                "prompt": state["prompt"],
+                "num_colors": num_bases + num_accents,
+                "num_bases": num_bases,
+                "num_accents": num_accents,
+                "base_color_desc": base_desc,
+            })
+        elif state["attempts"] == 0:
             result = palette_chain.invoke({"prompt": state["prompt"], "num_colors": nc})
         else:
             result = retry_chain.invoke({
@@ -146,10 +181,11 @@ graph.add_conditional_edges("validate", should_retry, {
 palette_graph = graph.compile()
 
 
-def generate_palette(prompt: str, num_colors: int = 5) -> dict:
+def generate_palette(prompt: str, num_colors: int = 5, base_colors: list | None = None) -> dict:
     result = palette_graph.invoke({
         "prompt": prompt,
         "num_colors": num_colors,
+        "base_colors": base_colors or [],
         "colors": [],
         "is_valid": False,
         "error": "",
@@ -368,6 +404,34 @@ def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = N
 # --- Mix from primaries: approximate any Amsterdam tube using only the 5 primaries ---
 
 
+_UNMIXABLE_CATEGORIES = [
+    (
+        ["phthalo"],
+        "Phthalo pigments are single-pigment specialty colors — the CMYK approximation gives a mixed green/blue that will look quite different from the real tube's characteristic transparent teal. Use this as a rough starting direction only.",
+    ),
+    (
+        ["prussian"],
+        "Prussian Blue is a single-pigment specialty color — the recipe is a rough approximation that won't capture the unique deep transparency and cool blue of the real tube.",
+    ),
+    (
+        ["quinacridone"],
+        "Quinacridone pigments have a unique transparent single-pigment chroma that cannot be reproduced from CMYK primaries — treat this recipe as a rough approximation only.",
+    ),
+    (
+        ["reflex", "iridescent", "metallic", "interference", "pearl", "gold", "silver", "bronze", "fluorescent"],
+        "This is a special-effect pigment — CMYK primary mixing cannot capture its metallic, iridescent, or fluorescent qualities.",
+    ),
+]
+
+
+def _specialty_warning(tube_name: str) -> str:
+    lower = tube_name.lower()
+    for keywords, msg in _UNMIXABLE_CATEGORIES:
+        if any(kw in lower for kw in keywords):
+            return msg
+    return ""
+
+
 _PRIMARIES_HEX = {
     "Primary Yellow 275":  "#F4C800",
     "Primary Magenta 369": "#C41E7F",
@@ -491,4 +555,5 @@ def generate_primary_mix(target_tube: str, target_hex: str = "") -> dict:
         "steps": [str(s) for s in steps if s],
         "notes": str(ai.get("notes") or ""),
         "targetHex": target_hex,
+        "warning": _specialty_warning(target_tube),
     }

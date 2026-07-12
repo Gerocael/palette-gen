@@ -21,6 +21,7 @@ def check_rate_limit(ip: str, action: str):
 class PaletteRequest(BaseModel):
     prompt: str
     num_colors: int = 5
+    base_colors: list[dict] = []
 
 class MixIngredient(BaseModel):
     tube: str
@@ -101,6 +102,7 @@ class MixGuideResponse(BaseModel):
     mix_recipe: list[MixIngredient]
     steps: list[str]
     notes: str
+    recipe_warning: str = ""
 
 
 def build_colors(raw_colors):
@@ -168,7 +170,7 @@ def create_palette(request: PaletteRequest, req: Request):
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
     check_rate_limit(req.client.host, "generate")
     try:
-        result = generate_palette(request.prompt, num_colors=max(3, min(5, request.num_colors)))
+        result = generate_palette(request.prompt, num_colors=max(3, min(5, request.num_colors)), base_colors=request.base_colors or [])
         colors = build_colors(result["colors"])
         technique = build_technique(result.get("technique"))
         pigment_analysis = analyze_palette_pigments(colors)
@@ -270,7 +272,8 @@ def mix_from_primaries(request: PrimariesMixRequest, req: Request):
             color_name=target,
             mix_recipe=color.mix_recipe or [],
             steps=steps,
-            notes=str(result.get("notes") or "")
+            notes=str(result.get("notes") or ""),
+            recipe_warning=str(result.get("warning") or "")
         )
     except HTTPException:
         raise
