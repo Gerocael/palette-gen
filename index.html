@@ -939,6 +939,9 @@
             <button class="download-btn" onclick="savePaletteAsPng()" title="Save as PNG">&#8681;</button>
             <button class="download-btn story-btn" onclick="savePaletteAsStoryPng()" title="Save as a 9:16 story image">9:16</button>
         </div>`;
+        if (allowBaseSelect) {
+            html += `<div id="genRefloodRow" class="gen-reflood-row" style="display:none"><button class="save-btn" onclick="regenerateWithFlood()">Regenerate with flood base</button></div>`;
+        }
 
         const colorsWithRecipe = data.colors.map((color, i) => {
             const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
@@ -1027,12 +1030,6 @@
             lastPalette = data;
             genFloodBases = [];
             renderPalette(data, 'paletteResult', true, true);
-            const refloodRow = document.createElement('div');
-            refloodRow.id = 'genRefloodRow';
-            refloodRow.className = 'gen-reflood-row';
-            refloodRow.style.display = 'none';
-            refloodRow.innerHTML = '<button class="save-btn" onclick="regenerateWithFlood()">Regenerate with flood base</button>';
-            document.getElementById('paletteResult').appendChild(refloodRow);
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Generate'; }
     }
