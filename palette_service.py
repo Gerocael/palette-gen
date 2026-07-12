@@ -199,42 +199,42 @@ IMPORTANT RULES:
 Respond ONLY with a JSON object containing a "palettes" array of 3 palettes. Each palette has:
 - "name": a short evocative name for the palette (e.g. "Autumn Embers")
 - "mood": one short sentence describing the feeling of this palette
-- "colors": an array of exactly 5 colors, each with:
+- "colors": an array of exactly {num_colors} colors, each with:
   - hexCode: a valid hex color
   - colorName: if the mixRecipe uses only one tube, MUST be exactly that tube's name. When mixing, use a recognized color name.
   - emotionalDescription: the mood this color evokes
-  - pourRatio: percentage in the pour as a whole number (all 5 add to 100)
+  - pourRatio: percentage in the pour as a whole number (all {num_colors} add to 100)
   - mixRecipe: array of ingredients using ONLY tubes from the user's list. Each has tube, tubeHex, grams (totaling 15-25g).
 - "technique": an object with name, reason, and tip
 No other text, no markdown. Just the JSON object."""),
-    ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes I can make. Creative direction: {direction}. Be adventurous and avoid obvious or generic combinations.")
+    ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes I can make with exactly {num_colors} colors each. Creative direction: {direction}. Be adventurous and avoid obvious or generic combinations.")
 ])
 
 suggest_flood_prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a color palette expert for acrylic pour painters who use a flood-and-accent technique.
-The user floods their entire canvas with one dominant base color first, then adds 4 accent colors on top for contrast and interest.
+The user floods their entire canvas with one dominant base color first, then adds {num_accents} accent colors on top for contrast and interest.
 The user gives you a list of Royal Talens Amsterdam Standard Series tubes they own.
 Suggest exactly 3 distinct pour palettes using ONLY those tubes. Each palette MUST explore a completely different mood, style, and color range.
 IMPORTANT RULES:
-- Each palette has exactly 5 colors: 1 base and 4 accents.
+- Each palette has exactly {num_colors} colors: 1 base and {num_accents} accents.
 - The base color floods the entire canvas first — it must be a strong, intentional color.
-- The 4 accent colors must contrast strongly against the base. No accent should visually disappear into the base.
+- The {num_accents} accent colors must contrast strongly against the base. No accent should visually disappear into the base.
 - Every palette must span at least 3 clearly distinct hue families.
 - Mix 2-4 tubes per color for interesting intermediary tones. Only use a single tube when it is a perfect match.
 - Every tube in every mixRecipe MUST come from the user's provided list. Do not invent tubes they do not own.
 Respond ONLY with a JSON object containing a "palettes" array of 3 palettes. Each palette has:
 - "name": a short evocative name
 - "mood": one short sentence describing the feeling
-- "colors": an array of exactly 5 colors, each with:
+- "colors": an array of exactly {num_colors} colors, each with:
   - hexCode: a valid hex color
   - colorName: if the mixRecipe uses only one tube, MUST be exactly that tube's name. If mixed, use a recognized color name.
   - emotionalDescription: the mood this color evokes
   - role: "base" for the flood color (exactly one per palette), "accent" for all others
-  - pourRatio: percentage in the pour as a whole number (all 5 add to 100). Base must be 50-70%. Accents share the remainder.
+  - pourRatio: percentage in the pour as a whole number (all {num_colors} add to 100). Base must be 50-70%. Accents share the remainder.
   - mixRecipe: array of ingredients using ONLY tubes from the user's list. Each has tube, tubeHex, grams. Base totals 40-60g, each accent totals 10-20g.
 - "technique": an object with name, reason, and tip specific to the flood-and-accent style
 No other text, no markdown. Just the JSON object."""),
-    ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes. {base_instruction} Creative direction: {direction}. Be adventurous and avoid obvious combinations.")
+    ("human", "I own these Amsterdam Standard Series tubes: {tubes}. Suggest 3 palettes with exactly {num_colors} colors each (1 base + {num_accents} accents). {base_instruction} Creative direction: {direction}. Be adventurous and avoid obvious combinations.")
 ])
 
 suggest_standard_chain = suggest_standard_prompt | suggest_llm | parser
@@ -243,18 +243,19 @@ suggest_flood_chain = suggest_flood_prompt | suggest_llm | parser
 suggest_retry_prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a color palette expert. Your previous response was invalid JSON.
 Respond ONLY with a valid JSON object (no markdown, no code blocks, no extra text) containing a "palettes" array of 3 palettes.
-Each palette: name, mood, colors (array of 5), technique.
-Each color: hexCode (#RRGGBB), colorName, emotionalDescription, pourRatio (int, all 5 sum to 100), mixRecipe (array of {{tube, tubeHex, grams}}).
+Each palette: name, mood, colors (array of {num_colors}), technique.
+Each color: hexCode (#RRGGBB), colorName, emotionalDescription, pourRatio (int, all {num_colors} sum to 100), mixRecipe (array of {{tube, tubeHex, grams}}).
 IMPORTANT: Every tube in every mixRecipe MUST come from the user's tube list. Do not invent tubes."""),
-    ("human", "Tubes: {tubes}. Suggest 3 palettes. Previous error: {error}")
+    ("human", "Tubes: {tubes}. Suggest 3 palettes with {num_colors} colors each. Previous error: {error}")
 ])
 
 suggest_retry_chain = suggest_retry_prompt | suggest_llm | parser
 
 
-def suggest_from_shelf(tubes: list, base_tube: str | None = None, flood_mode: bool = False) -> dict:
+def suggest_from_shelf(tubes: list, base_tube: str | None = None, flood_mode: bool = False, num_colors: int = 5) -> dict:
     tube_list = ", ".join(tubes)
     direction = random.choice(CREATIVE_DIRECTIONS)
+    num_accents = num_colors - 1
 
     for attempt in range(3):
         try:
@@ -263,20 +264,20 @@ def suggest_from_shelf(tubes: list, base_tube: str | None = None, flood_mode: bo
                     if base_tube:
                         base_instruction = (
                             f"I want to use '{base_tube}' as my flood base — it covers the entire canvas first. "
-                            f"Choose 4 accent colors from my remaining tubes that contrast strongly against it. "
+                            f"Choose {num_accents} accent colors from my remaining tubes that contrast strongly against it. "
                             f"Mark '{base_tube}' with role 'base' and all other colors with role 'accent'."
                         )
                     else:
                         base_instruction = (
-                            "You choose which of my tubes works best as the flood base color for each palette. "
-                            "Mark it with role 'base' and the other 4 colors with role 'accent'. "
-                            "Choose accents that contrast strongly against the base."
+                            f"You choose which of my tubes works best as the flood base color for each palette. "
+                            f"Mark it with role 'base' and the other {num_accents} colors with role 'accent'. "
+                            f"Choose accents that contrast strongly against the base."
                         )
-                    result = suggest_flood_chain.invoke({"tubes": tube_list, "direction": direction, "base_instruction": base_instruction})
+                    result = suggest_flood_chain.invoke({"tubes": tube_list, "direction": direction, "base_instruction": base_instruction, "num_colors": num_colors, "num_accents": num_accents})
                 else:
-                    result = suggest_standard_chain.invoke({"tubes": tube_list, "direction": direction})
+                    result = suggest_standard_chain.invoke({"tubes": tube_list, "direction": direction, "num_colors": num_colors})
             else:
-                result = suggest_retry_chain.invoke({"tubes": tube_list, "error": last_error})
+                result = suggest_retry_chain.invoke({"tubes": tube_list, "error": last_error, "num_colors": num_colors})
 
             if isinstance(result, dict) and "palettes" in result:
                 valid = [p for p in result["palettes"] if len(p.get("colors", [])) >= 4]
@@ -315,22 +316,23 @@ def mix_colors(color1: str, color2: str) -> dict:
 
 complement_prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a color palette expert for acrylic pour painters.
-The user has chosen {num_seed} seed color(s) for a pour palette and wants you to suggest exactly 3 additional colors that complement them (via contrast, harmony, or accent) to round out the palette.
-Respond ONLY with a JSON object containing a "colors" array of exactly 3 colors, each with:
+The user has chosen {num_seed} seed color(s) for a pour palette and wants you to suggest exactly {num_suggestions} additional colors that complement them (via contrast, harmony, or accent) to round out a {num_total}-color palette.
+Respond ONLY with a JSON object containing a "colors" array of exactly {num_suggestions} colors, each with:
 - hexCode: a valid hex color
 - colorName: if the mixRecipe uses only one tube, colorName MUST be exactly that tube's name (e.g. "Titanium White 105"). When mixing two or more tubes, use a commonly recognized color name for the mix.
 - emotionalDescription: one short sentence on why this color complements the seed color(s)
 - mixRecipe: an array of ingredients to mix using Royal Talens Amsterdam Standard Series acrylic tubes to approximate this color. Each ingredient has tube, tubeHex, grams (realistic amounts totaling 15-25g).
 {shelf_instruction}
-The 3 suggestions should not be near-duplicates of each other or of the seed color(s) — offer real variety.
+The {num_suggestions} suggestions should not be near-duplicates of each other or of the seed color(s) — offer real variety.
 No other text, no markdown, no explanation. Just the JSON object."""),
-    ("human", "Seed color(s): {seed_colors}. Suggest 3 colors that complement them well for an acrylic pour palette.")
+    ("human", "Seed color(s): {seed_colors}. Suggest {num_suggestions} colors that complement them well for a {num_total}-color acrylic pour palette.")
 ])
 
 complement_chain = complement_prompt | llm | parser
 
 
-def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = None) -> dict:
+def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = None, num_colors: int = 5) -> dict:
+    num_suggestions = max(1, num_colors - len(seed_colors))
     seed_list = ", ".join(seed_colors)
     if shelf_tubes:
         tube_list = ", ".join(shelf_tubes)
@@ -342,11 +344,13 @@ def suggest_complementary_colors(seed_colors: list, shelf_tubes: list | None = N
         shelf_instruction = "You may use any tube from the Amsterdam Standard Series."
     result = complement_chain.invoke({
         "num_seed": len(seed_colors),
+        "num_suggestions": num_suggestions,
+        "num_total": num_colors,
         "seed_colors": seed_list,
         "shelf_instruction": shelf_instruction
     })
     if isinstance(result, dict) and "colors" in result:
-        return {"colors": result["colors"][:3]}
+        return {"colors": result["colors"][:num_suggestions]}
     return {"colors": []}
 
 
@@ -371,11 +375,11 @@ _TINTING_STRENGTH = {
     "Titanium White 105":  0.6,   # weak — needs more grams to lighten
 }
 
-def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
-    """Compute primary paint recipe from a hex color using CMYK + tinting strength correction."""
+def hex_to_primaries(hex_color: str) -> list[dict]:
+    """Compute minimum viable primary recipe (all ingredients ≥ 1g, whole grams, scale ×1 base)."""
     h = hex_color.lstrip("#")
     if len(h) != 6:
-        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": 1}]
 
     r = int(h[0:2], 16) / 255.0
     g = int(h[2:4], 16) / 255.0
@@ -385,9 +389,9 @@ def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
     min_rgb = min(r, g, b)
 
     if max_rgb < 0.04:
-        return [{"tube": "Oxide Black 735", "tubeHex": "#2C2420", "grams": total_grams}]
+        return [{"tube": "Oxide Black 735", "tubeHex": "#2C2420", "grams": 1}]
     if min_rgb > 0.96:
-        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": 1}]
 
     # CMYK decomposition
     k = 1.0 - max_rgb
@@ -407,8 +411,8 @@ def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
         ("Titanium White 105",  white),
     ]
 
-    # Divide each raw CMY/K/W value by its tinting strength so high-strength
-    # pigments (especially black) don't get disproportionately large gram amounts
+    # Tinting strength correction: divide by strength so high-strength pigments
+    # (especially black at 8×) don't get disproportionately large gram amounts
     adjusted = [
         (name, raw / _TINTING_STRENGTH[name])
         for name, raw in components
@@ -416,25 +420,38 @@ def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
 
     total = sum(v for _, v in adjusted)
     if total == 0:
-        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": 1}]
+
+    # Normalize to proportions; drop anything below 2% (too small to matter at any batch size)
+    proportions = [(name, adj / total) for name, adj in adjusted if adj / total >= 0.02]
+    if not proportions:
+        return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": 1}]
+
+    # Re-normalize after dropping tiny proportions
+    prop_total = sum(p for _, p in proportions)
+    proportions = [(name, p / prop_total) for name, p in proportions]
+
+    # Scale so the smallest ingredient = 1g — this is the minimum viable base batch
+    min_prop = min(p for _, p in proportions)
+    scale = 1.0 / min_prop
 
     result = []
-    for name, adj in adjusted:
-        grams = round(adj / total * total_grams, 1)
-        if grams >= 0.5:
+    for name, prop in sorted(proportions, key=lambda x: -x[1]):
+        grams = round(prop * scale)
+        if grams >= 1:
             result.append({"tube": name, "tubeHex": _PRIMARIES_HEX[name], "grams": grams})
 
-    return sorted(result, key=lambda x: x["grams"], reverse=True)
+    return result
 
 
 primaries_notes_prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a color mixing expert for acrylic pour painters.
-The user has a computed mixing recipe. Write practical guidance for it.
+The user has a computed mixing recipe given as proportions. Write practical guidance for it.
 Respond ONLY with a JSON object containing:
-- steps: array of 3-4 concise plain-English steps for physically mixing these paints in order (start with the largest amount, add smaller amounts gradually, test on scrap)
+- steps: array of 3-4 concise plain-English steps for physically mixing these paints in order (mention tube names and proportions like "largest portion", "a small amount", NOT absolute grams — the user picks their own total)
 - notes: one honest sentence on how close this approximation gets to the real tube and what pigment character is lost (transparency, single-pigment chroma, special effects)
 No other text. Just the JSON."""),
-    ("human", "Target colour: {target_tube}. Recipe: {recipe_desc}. Write mixing steps and a note on accuracy.")
+    ("human", "Target colour: {target_tube}. Recipe proportions: {recipe_desc}. Write mixing steps and a note on accuracy.")
 ])
 
 primaries_notes_chain = primaries_notes_prompt | llm | parser
@@ -442,7 +459,14 @@ primaries_notes_chain = primaries_notes_prompt | llm | parser
 
 def generate_primary_mix(target_tube: str, target_hex: str = "") -> dict:
     recipe = hex_to_primaries(target_hex or "#888888")
-    recipe_desc = ", ".join(f"{ing['tube']} {ing['grams']}g" for ing in recipe)
+    total_raw = sum(ing["grams"] for ing in recipe)
+    if total_raw > 0:
+        recipe_desc = ", ".join(
+            f"{ing['tube']} (~{round(ing['grams'] / total_raw * 100)}%)"
+            for ing in recipe
+        )
+    else:
+        recipe_desc = "Titanium White 105 (100%)"
     try:
         ai = primaries_notes_chain.invoke({"target_tube": target_tube, "recipe_desc": recipe_desc})
         if not isinstance(ai, dict):

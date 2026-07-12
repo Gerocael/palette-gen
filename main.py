@@ -62,6 +62,7 @@ class ShelfRequest(BaseModel):
     tubes: list[str]
     base_tube: str | None = None
     flood_mode: bool = False
+    num_colors: int = 5
 
 class SuggestedPalette(BaseModel):
     name: str
@@ -88,6 +89,7 @@ class MixResponse(BaseModel):
 class ComplementRequest(BaseModel):
     colors: list[str]
     shelf_tubes: list[str] = []
+    num_colors: int = 5
 
 class ComplementResponse(BaseModel):
     colors: list[Color]
@@ -189,7 +191,7 @@ def suggest_palettes(request: ShelfRequest, req: Request):
         raise HTTPException(status_code=400, detail="Please add at least 2 tubes to your shelf")
     check_rate_limit(req.client.host, "suggest")
     try:
-        result = suggest_from_shelf(request.tubes, base_tube=request.base_tube, flood_mode=request.flood_mode)
+        result = suggest_from_shelf(request.tubes, base_tube=request.base_tube, flood_mode=request.flood_mode, num_colors=max(3, min(5, request.num_colors)))
         palettes = []
         for p in result.get("palettes", []):
             colors = build_colors(p.get("colors", []))
@@ -231,7 +233,7 @@ def complement_colors(request: ComplementRequest, req: Request):
         raise HTTPException(status_code=400, detail="Provide 1 or 2 seed colors")
     check_rate_limit(req.client.host, "complement")
     try:
-        result = suggest_complementary_colors(colors, shelf_tubes=request.shelf_tubes)
+        result = suggest_complementary_colors(colors, shelf_tubes=request.shelf_tubes, num_colors=max(3, min(5, request.num_colors)))
         return ComplementResponse(colors=build_colors(result.get("colors", [])))
     except HTTPException:
         raise

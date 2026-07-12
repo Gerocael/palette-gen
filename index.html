@@ -96,6 +96,7 @@
         .canvas-total-amount { color: var(--tx-2); font-weight: 500; }
         .recipe-section { background: var(--surf); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; opacity: 0; animation: fadeIn 0.4s ease forwards; animation-delay: 0.3s; }
         .recipe-heading { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--tx-2); margin-bottom: 16px; }
+        .recipe-color-name { font-size: 0.78rem; font-weight: 600; color: var(--tx-2); margin-bottom: 6px; }
         .recipe-row { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--bd-f); align-items: flex-start; }
         .recipe-row:last-child { border-bottom: none; }
         .recipe-swatch { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; margin-top: 2px; }
@@ -141,6 +142,12 @@
         .comp-result-list { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; animation: fadeIn 0.4s ease forwards; }
         .guide-total-wrapper { display: flex; align-items: center; gap: 6px; }
         .guide-total-wrapper .config-unit { display: inline; margin-top: 0; }
+        .mult-row { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px; flex-wrap: wrap; }
+        .mult-label { font-size: 0.75rem; color: var(--tx-3); }
+        .mult-btn { padding: 4px 11px; background: transparent; border: 1px solid var(--bd); border-radius: 16px; color: var(--tx-3); font-size: 0.8rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+        .mult-btn:hover { border-color: var(--bd-h); color: var(--tx-2); }
+        .mult-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
+        .mult-custom { width: 44px; }
         .guide-steps { margin-top: 16px; }
         .guide-steps ol { margin: 8px 0 0 20px; padding: 0; color: var(--tx-2); font-size: 0.85rem; line-height: 1.6; }
         .color-behavior { font-size: 0.65rem; opacity: 0.7; margin-top: 2px; }
@@ -180,6 +187,8 @@
         .base-option:hover { border-color: var(--bd-h); color: var(--tx-2); transform: none; }
         .base-option.active { border-color: var(--tx-2); color: var(--tx); background: var(--surf-3); }
         .base-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .base-badge { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--tx-2); color: var(--bg); font-size: 0.6rem; font-weight: 700; flex-shrink: 0; }
+        .flood-split-note { font-size: 0.7rem; color: var(--tx-3); margin-top: 3px; }
         .suggest-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; padding: 0; margin-bottom: 16px; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
         .suggest-card:hover { border-color: var(--bd-h); }
         .suggest-card-swatches { display: flex; height: 60px; }
@@ -233,6 +242,14 @@
             </div>
             <span class="config-unit">cm</span>
             <div class="config-total" id="cfgTotal"></div>
+        </div>
+        <div class="config-item">
+            <span class="config-label">Colors in palette</span>
+            <div class="config-row" style="gap:4px;flex-wrap:wrap;">
+                <button class="mult-btn" onclick="setCfgColors(3,this)">3</button>
+                <button class="mult-btn" onclick="setCfgColors(4,this)">4</button>
+                <button class="mult-btn active" onclick="setCfgColors(5,this)">5</button>
+            </div>
         </div>
         <div class="config-item">
             <span class="config-label">Flood base</span>
@@ -335,7 +352,6 @@
                         <div class="tube-picker-chips" id="primariesChips"></div>
                     </div>
                 </div>
-                <div class="guide-total-wrapper"><input type="number" class="cfg-num" id="primariesTotalGrams" value="20" min="1" max="500" oninput="rescalePrimaries()" /><span class="config-unit">g total</span></div>
                 <button id="primariesBtn" onclick="getPrimariesMix()">Get recipe</button>
             </div>
             <div id="primariesResult"></div>
@@ -354,7 +370,7 @@
                 <input type="file" id="shelfImportInput" accept="application/json" style="display:none" onchange="importShelf(event)" />
             </div>
             <div class="base-picker-row" id="basePickerRow">
-                <span class="base-picker-label">Flood base</span>
+                <span class="base-picker-label" id="basePickerLabel">Flood base</span>
                 <div id="baseOptions"></div>
             </div>
             <button id="suggestBtn" onclick="suggestPalettes()">Suggest palettes</button>
@@ -488,15 +504,24 @@
     ];
 
     let selectedTubes = new Set();
-    let baseColor = null;
+    let floodBases = [];
     let floodMode = false;
+    let cfgNumColors = 5;
+
+    function setCfgColors(n, btn) {
+        cfgNumColors = n;
+        document.querySelectorAll('.config-item .mult-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    }
 
     function toggleFloodMode() {
         floodMode = !floodMode;
         const btn = document.getElementById('floodToggle');
         btn.textContent = floodMode ? 'On' : 'Off';
         btn.classList.toggle('on', floodMode);
+        if (!floodMode) floodBases = [];
         renderBasePicker();
+        calculatePaintNeeded();
     }
 
     const ttEl = document.getElementById('shelfTooltip');
@@ -551,7 +576,7 @@
 
     function filterShelf() { renderShelfChips(); }
     function toggleTube(t) {
-        if (selectedTubes.has(t)) { selectedTubes.delete(t); if (baseColor === t) baseColor = null; }
+        if (selectedTubes.has(t)) { selectedTubes.delete(t); floodBases = floodBases.filter(b => b !== t); }
         else selectedTubes.add(t);
         renderShelfChips();
     }
@@ -559,7 +584,7 @@
     function exportShelf() {
         const data = {
             tubes: Array.from(selectedTubes),
-            baseColor: baseColor || null,
+            floodBases: floodBases,
             floodMode: floodMode
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
@@ -580,7 +605,7 @@
                 const validTubeNames = new Set(allTubes.map(t => t.tube));
                 const tubes = (Array.isArray(data.tubes) ? data.tubes : []).filter(t => validTubeNames.has(t));
                 selectedTubes = new Set(tubes);
-                baseColor = (data.baseColor && selectedTubes.has(data.baseColor)) ? data.baseColor : null;
+                floodBases = (Array.isArray(data.floodBases) ? data.floodBases : (data.baseColor ? [data.baseColor] : [])).filter(b => selectedTubes.has(b));
                 if (typeof data.floodMode === 'boolean' && data.floodMode !== floodMode) toggleFloodMode();
                 renderShelfChips();
             } catch (e) {
@@ -595,18 +620,29 @@
         document.getElementById('shelfCount').textContent = `${c} tube${c===1?'':'s'} selected`;
         renderBasePicker();
     }
-    function setBase(tube) { baseColor = tube; renderBasePicker(); }
+    function toggleFloodBase(tube) {
+        const idx = floodBases.indexOf(tube);
+        if (idx >= 0) floodBases.splice(idx, 1);
+        else floodBases.push(tube);
+        renderBasePicker();
+        calculatePaintNeeded();
+    }
     function renderBasePicker() {
         const row = document.getElementById('basePickerRow');
         const opts = document.getElementById('baseOptions');
-        if (!floodMode || selectedTubes.size === 0) { row.style.display = 'none'; if (!floodMode) baseColor = null; return; }
+        const label = document.getElementById('basePickerLabel');
+        if (!floodMode || selectedTubes.size === 0) { row.style.display = 'none'; return; }
         row.style.display = 'flex';
-        let html = `<button class="base-option ${!baseColor ? 'active' : ''}" onclick="setBase(null)">AI picks</button>`;
+        const n = floodBases.length;
+        if (label) label.textContent = n > 1 ? `Flood base (${n} sections)` : 'Flood base';
+        let html = `<button class="base-option ${n === 0 ? 'active' : ''}" onclick="floodBases=[];renderBasePicker();calculatePaintNeeded()">AI picks</button>`;
         selectedTubes.forEach(tube => {
             const t = allTubes.find(a => a.tube === tube);
-            const isActive = baseColor === tube;
-            html += `<button class="base-option ${isActive ? 'active' : ''}" onclick="setBase('${tube.replace(/'/g, "\\'")}')">
-                <span class="base-dot" style="background:${t ? t.hex : '#888'}"></span>${stripCode(tube)}
+            const idx = floodBases.indexOf(tube);
+            const isActive = idx >= 0;
+            const badge = isActive && n > 1 ? `<span class="base-badge">${idx + 1}</span>` : '';
+            html += `<button class="base-option ${isActive ? 'active' : ''}" onclick="toggleFloodBase('${tube.replace(/'/g, "\\'")}')">
+                <span class="base-dot" style="background:${t ? t.hex : '#888'}"></span>${stripCode(tube)}${badge}
             </button>`;
         });
         opts.innerHTML = html;
@@ -621,7 +657,7 @@
 
     let mixTube1 = null, mixTube2 = null;
     let compTube1 = null, compTube2 = null;
-    let primariesTube = null, lastPrimariesMix = null;
+    let primariesTube = null, lastPrimariesMix = null, primariesMultiplier = 1;
 
     function toggleTubePicker(pickerId) {
         const picker = document.getElementById(pickerId);
@@ -742,7 +778,16 @@
         const totalMixed = Math.round(w*h*ML_PER_CM2*RESERVE*floodFactor);
         const totalPaint = Math.round(totalMixed*PAINT_RATIO);
         const el = document.getElementById('cfgTotal');
-        if (el) el.textContent = `${totalPaint}g paint + ${totalPaint}g medium`;
+        if (el) {
+            const n = floodBases.length;
+            if (floodMode && n > 1) {
+                const sectionG = Math.round((w*h/n)*ML_PER_CM2*RESERVE*PAINT_RATIO);
+                const names = floodBases.map(b => stripCode(b)).join(' / ');
+                el.innerHTML = `${totalPaint}g paint + ${totalPaint}g medium<div class="flood-split-note">${n}-way base split: ${sectionG}g each<br>${names}</div>`;
+            } else {
+                el.textContent = `${totalPaint}g paint + ${totalPaint}g medium`;
+            }
+        }
         lastPalette.colors.forEach((color,i) => {
             const cg = Math.round(totalPaint*((color.pour_ratio||20)/100));
             const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
@@ -908,7 +953,10 @@
                 }
                 html += `<div class="recipe-row">
                     <div class="recipe-swatch" style="background:${color.hex_code}"></div>
-                    <div class="recipe-ingredients">${ingHtml}</div>
+                    <div class="recipe-ingredients">
+                        <div class="recipe-color-name">${getColorDisplayName(color)}</div>
+                        ${ingHtml}
+                    </div>
                 </div>`;
             });
             html += `<div class="recipe-grand-total"><span>Total paint</span><span id="recipeGrandTotal">${Math.round(grandTotal)}g</span></div>`;
@@ -946,7 +994,7 @@
         btn.disabled=true; btn.textContent='Generating...';
         result.innerHTML='<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,num_colors:5})});
+            const r = await fetch('/palette/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,num_colors:cfgNumColors})});
             if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json(); lastPalette = data; renderPalette(data,'paletteResult',true);
         } catch(err) { result.innerHTML=`<div class="error">${err.message}</div>`; }
@@ -960,7 +1008,7 @@
         btn.disabled=true; btn.textContent='Thinking...';
         result.innerHTML='<div class="loading">Finding palettes from your shelf<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tubes:Array.from(selectedTubes),base_tube:baseColor||null,flood_mode:floodMode})});
+            const r = await fetch('/palette/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tubes:Array.from(selectedTubes),base_tube:floodBases[0]||null,flood_mode:floodMode,num_colors:cfgNumColors})});
             if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json(); suggestedPalettes = data.palettes;
             let html = '';
@@ -1039,7 +1087,7 @@
         btn.disabled = true; btn.textContent = 'Thinking...';
         result.innerHTML = '<div class="loading">Finding complements<span class="loading-dots"></span></div>';
         try {
-            const r = await fetch('/palette/complement', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({colors, shelf_tubes:Array.from(selectedTubes)})});
+            const r = await fetch('/palette/complement', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({colors, shelf_tubes:Array.from(selectedTubes), num_colors:cfgNumColors})});
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
             renderComplementResult(data.colors);
@@ -1047,18 +1095,42 @@
         finally { btn.disabled = false; btn.textContent = 'Suggest'; }
     }
 
+    function setPrimariesMultiplier(n, btn) {
+        primariesMultiplier = n;
+        document.querySelectorAll('.mult-row .mult-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const custom = document.getElementById('primariesCustomMult');
+        if (custom) custom.value = '';
+        rescalePrimaries();
+    }
+
+    function onCustomMult(input) {
+        const n = parseFloat(input.value);
+        if (!n || n < 1) return;
+        document.querySelectorAll('.mult-row .mult-btn').forEach(b => b.classList.remove('active'));
+        primariesMultiplier = n;
+        rescalePrimaries();
+    }
+
     function rescalePrimaries() {
         if (!lastPrimariesMix) return;
-        const total = parseFloat(document.getElementById('primariesTotalGrams').value) || 0;
         const recipe = lastPrimariesMix.mix_recipe || [];
-        const ratioSum = recipe.reduce((s, ing) => s + ing.grams, 0);
-        if (ratioSum <= 0) return;
+        let runningTotal = 0;
         recipe.forEach((ing, j) => {
             const el = document.getElementById(`primaries-grams-${j}`);
-            if (el) el.textContent = `${Math.round(ing.grams / ratioSum * total)}g`;
+            if (!el) return;
+            const row = el.closest('.recipe-ingredient');
+            const scaled = Math.round(ing.grams * primariesMultiplier);
+            if (scaled < 1) {
+                if (row) row.style.display = 'none';
+            } else {
+                if (row) row.style.display = '';
+                el.textContent = `${scaled}g`;
+                runningTotal += scaled;
+            }
         });
         const gt = document.getElementById('primariesGrandTotal');
-        if (gt) gt.textContent = `${Math.round(total)}g`;
+        if (gt) gt.textContent = `${runningTotal}g`;
     }
 
     async function getPrimariesMix() {
@@ -1074,12 +1146,14 @@
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
             lastPrimariesMix = data;
+            primariesMultiplier = 1;
+            const baseTotal = (data.mix_recipe||[]).reduce((s,i) => s + i.grams, 0);
             let ingHtml = '';
             (data.mix_recipe||[]).forEach((ing, j) => {
                 ingHtml += `<div class="recipe-ingredient">
                     <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
                     <span class="recipe-tube">${ing.tube}</span>
-                    <span class="recipe-grams" id="primaries-grams-${j}">${Math.round(ing.grams)}g</span>
+                    <span class="recipe-grams" id="primaries-grams-${j}">${ing.grams}g</span>
                 </div>`;
             });
             let stepsHtml = '';
@@ -1094,11 +1168,18 @@
             <div class="recipe-section">
                 <div class="recipe-heading">Primary recipe</div>
                 <div class="recipe-ingredients">${ingHtml}</div>
-                <div class="recipe-grand-total"><span>Total paint</span><span id="primariesGrandTotal">${Math.round(parseFloat(document.getElementById('primariesTotalGrams').value)||0)}g</span></div>
+                <div class="recipe-grand-total"><span>Total paint</span><span id="primariesGrandTotal">${baseTotal}g</span></div>
+                <div class="mult-row">
+                    <span class="mult-label">Batch</span>
+                    <button class="mult-btn active" onclick="setPrimariesMultiplier(1,this)">×1</button>
+                    <button class="mult-btn" onclick="setPrimariesMultiplier(2,this)">×2</button>
+                    <button class="mult-btn" onclick="setPrimariesMultiplier(5,this)">×5</button>
+                    <button class="mult-btn" onclick="setPrimariesMultiplier(10,this)">×10</button>
+                    <input type="number" class="cfg-num mult-custom" id="primariesCustomMult" min="1" max="100" placeholder="×?" oninput="onCustomMult(this)" />
+                </div>
                 ${stepsHtml ? `<div class="guide-steps"><div class="recipe-heading">Steps</div><ol>${stepsHtml}</ol></div>` : ''}
                 ${data.notes ? `<div class="recipe-disclaimer">${data.notes}</div>` : ''}
             </div>`;
-            rescalePrimaries();
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Get recipe'; }
     }
