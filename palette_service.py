@@ -362,8 +362,17 @@ _PRIMARIES_HEX = {
     "Titanium White 105":  "#FAFAFA",
 }
 
+# Relative tinting strength vs Primary Yellow (higher = stronger pigment = fewer grams needed)
+_TINTING_STRENGTH = {
+    "Primary Yellow 275":  1.0,
+    "Primary Magenta 369": 2.0,
+    "Primary Cyan 572":    2.5,
+    "Oxide Black 735":     8.0,   # very high — a little goes a long way
+    "Titanium White 105":  0.6,   # weak — needs more grams to lighten
+}
+
 def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
-    """Compute primary paint recipe from a hex color using CMYK decomposition."""
+    """Compute primary paint recipe from a hex color using CMYK + tinting strength correction."""
     h = hex_color.lstrip("#")
     if len(h) != 6:
         return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
@@ -386,9 +395,9 @@ def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
     m = (1.0 - g - k) / max_rgb
     y = (1.0 - b - k) / max_rgb
 
-    # White for desaturated / pastel colours
+    # White only for desaturated / pastel colours (saturation below ~65%)
     saturation = (max_rgb - min_rgb) / max_rgb
-    white = max(0.0, (1.0 - saturation) * max_rgb * 0.7)
+    white = max(0.0, (0.65 - saturation) * max_rgb * 1.5)
 
     components = [
         ("Primary Yellow 275",  y),
@@ -398,13 +407,20 @@ def hex_to_primaries(hex_color: str, total_grams: float = 20.0) -> list[dict]:
         ("Titanium White 105",  white),
     ]
 
-    total = sum(v for _, v in components)
+    # Divide each raw CMY/K/W value by its tinting strength so high-strength
+    # pigments (especially black) don't get disproportionately large gram amounts
+    adjusted = [
+        (name, raw / _TINTING_STRENGTH[name])
+        for name, raw in components
+    ]
+
+    total = sum(v for _, v in adjusted)
     if total == 0:
         return [{"tube": "Titanium White 105", "tubeHex": "#FAFAFA", "grams": total_grams}]
 
     result = []
-    for name, amount in components:
-        grams = round(amount / total * total_grams, 1)
+    for name, adj in adjusted:
+        grams = round(adj / total * total_grams, 1)
         if grams >= 0.5:
             result.append({"tube": name, "tubeHex": _PRIMARIES_HEX[name], "grams": grams})
 
