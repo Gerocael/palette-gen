@@ -178,6 +178,7 @@
         .mult-btn { padding: 4px 11px; background: transparent; border: 1px solid var(--bd); border-radius: 16px; color: var(--tx-3); font-size: 0.8rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
         .mult-btn:hover { border-color: var(--bd-h); color: var(--tx-2); }
         .mult-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
+        .mult-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
         .mult-custom { width: 44px; }
         .guide-steps { margin-top: 16px; }
         .guide-steps ol { margin: 8px 0 0 20px; padding: 0; color: var(--tx-2); font-size: 0.85rem; line-height: 1.6; }
@@ -288,7 +289,7 @@
         </div>
         <div class="config-item">
             <span class="config-label">Colors in palette</span>
-            <div class="config-row" style="gap:4px;flex-wrap:wrap;">
+            <div class="config-row" id="colorCountBtns" style="gap:4px;flex-wrap:wrap;">
                 <button class="mult-btn" onclick="setCfgColors(3,this)">3</button>
                 <button class="mult-btn" onclick="setCfgColors(4,this)">4</button>
                 <button class="mult-btn active" onclick="setCfgColors(5,this)">5</button>
@@ -1079,6 +1080,13 @@
     let genBases = [];
     let isFirstGen = true;
 
+    function lockColorCount() {
+        document.querySelectorAll('#colorCountBtns .mult-btn').forEach(b => b.disabled = true);
+    }
+    function unlockColorCount() {
+        document.querySelectorAll('#colorCountBtns .mult-btn').forEach(b => b.disabled = false);
+    }
+
     function updateRegenBtn() {
         if (!lastPalette) return;
         const btn = document.querySelector('.palette-action-row .regen-btn');
@@ -1148,6 +1156,7 @@
             genBases = data.colors.filter(c => c.role === 'base').map(c => ({...c}));
             lockedColors = data.colors.filter(c => c.role === 'locked').map(c => ({...c}));
             renderPalette(data, 'paletteResult', true, isFirstGen);
+            lockColorCount();
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Generate'; }
     }
@@ -1156,6 +1165,7 @@
         const prompt = document.getElementById('promptInput').value.trim();
         if (!prompt) { document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>'; return; }
         genBases = []; lockedColors = []; isFirstGen = true;
+        unlockColorCount();
         await doGenerate(prompt, []);
     }
 
