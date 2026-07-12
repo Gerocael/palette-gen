@@ -203,8 +203,12 @@
         .color-save-star { position: absolute; top: 6px; right: 8px; font-size: 1.15rem; line-height: 1; background: none; border: none; cursor: pointer; color: inherit; opacity: 0.3; padding: 2px; transition: opacity 0.15s, transform 0.1s; }
         .color-save-star:hover { opacity: 0.65; }
         .color-save-star.active { opacity: 1; transform: scale(1.1); }
-        .gen-reflood-row { padding: 0 0 4px; }
-        .gen-reflood-row .save-btn { font-weight: 600; }
+        .gen-base-btn { position: absolute; top: 30px; right: 8px; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; background: rgba(255,255,255,0.15); color: inherit; border: 1px solid rgba(255,255,255,0.28); cursor: pointer; opacity: 0.45; transition: opacity 0.15s; }
+        .gen-base-btn:hover { opacity: 0.85; }
+        .gen-base-btn.active { background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.7); opacity: 1; }
+        .regen-btn { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3px; padding: 8px 14px; }
+        .show-mix-btn { width: 100%; padding: 10px; margin-bottom: 8px; background: var(--surf); border: 1px solid var(--bd-m); border-radius: 8px; color: var(--tx-3); font-size: 0.8rem; cursor: pointer; text-align: center; }
+        .show-mix-btn:hover { background: var(--surf-h); color: var(--tx-2); }
         .suggest-card-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); margin-bottom: 4px; }
         .suggest-card-mood { font-size: 0.8rem; color: var(--tx-3); line-height: 1.4; }
         .loading { text-align: center; color: var(--tx-3); padding: 40px; font-size: 0.9rem; }
@@ -925,10 +929,11 @@
             const note = pigmentNotes[i];
             if (allowBaseSelect) {
                 const isSaved = lockedColors.some(lc => lc.hex_code === color.hex_code);
-                const showFlood = isSaved && floodMode;
+                const isBase = genBases.some(b => b.hex_code === color.hex_code);
                 html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
-                    <div class="color-base-label" id="gen-flood-label-${i}"${showFlood ? '' : ' style="display:none"'}>Flood</div>
+                    ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
                     <button class="color-save-star${isSaved ? ' active' : ''}" data-idx="${i}" onclick="toggleLockColor(this)">${isSaved ? '★' : '☆'}</button>
+                    ${floodMode ? `<button class="gen-base-btn${isBase ? ' active' : ''}" data-idx="${i}" onclick="toggleGenBaseBtn(this)">Base</button>` : ''}
                     ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
                     <div class="color-hex">${color.hex_code}</div>
                     ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
@@ -946,17 +951,18 @@
         html += '</div>';
         html += `<div class="download-wrapper">
             <button class="download-btn" onclick="savePaletteAsPng()" title="Save as PNG">&#8681;</button>
+            ${allowBaseSelect ? `<button class="download-btn regen-btn" onclick="regenerateGen()">Regenerate</button>` : ''}
             <button class="download-btn story-btn" onclick="savePaletteAsStoryPng()" title="Save as a 9:16 story image">9:16</button>
         </div>`;
-        if (allowBaseSelect) {
-            html += `<div class="gen-reflood-row"><button class="save-btn" onclick="regenerateGen()">Regenerate</button></div>`;
-        }
 
         const colorsWithRecipe = data.colors.map((color, i) => {
             const valid = (color.mix_recipe||[]).filter(ing => ing.tube && ing.tube !== 'Unknown' && ing.grams > 0);
             return { color, index: i, ingredients: valid };
         }).filter(c => c.ingredients.length > 0);
 
+        if (allowBaseSelect && colorsWithRecipe.length > 0) {
+            html += `<button class="show-mix-btn" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none';this.textContent=this.nextElementSibling.style.display===''?'Hide mixing guide':'Show mixing guide'">Show mixing guide</button><div class="mix-guide-collapsible" style="display:none">`;
+        }
         if (colorsWithRecipe.length > 0) {
             html += '<div class="recipe-section"><div class="recipe-heading">How to mix with Amsterdam Standard Series</div>';
             let grandTotal = 0;
@@ -1000,6 +1006,7 @@
             html += '<div class="recipe-disclaimer">Density and tinting-strength ratings are estimated from each pigment’s general chemistry, not lab-measured — use as a starting guide and test in a cup first.</div>';
             html += '</div>';
         }
+        if (allowBaseSelect && colorsWithRecipe.length > 0) { html += '</div>'; }
         if (data.prompt) html += `<div class="prompt-label">"${data.prompt}"</div>`;
         if (data.technique) {
             html += `<div class="technique-card"><div class="technique-name">${data.technique.name}</div>
@@ -1011,6 +1018,7 @@
     }
 
     let lockedColors = [];
+    let genBases = [];
 
     function toggleLockColor(btn) {
         const idx = parseInt(btn.dataset.idx);
@@ -1025,8 +1033,29 @@
         }
         btn.classList.toggle('active', willLock);
         btn.textContent = willLock ? '★' : '☆';
-        const floodLabel = document.getElementById(`gen-flood-label-${idx}`);
-        if (floodLabel) floodLabel.style.display = willLock && floodMode ? '' : 'none';
+    }
+
+    function toggleGenBaseBtn(btn) {
+        const idx = parseInt(btn.dataset.idx);
+        const color = lastPalette.colors[idx];
+        const baseIdx = genBases.findIndex(b => b.hex_code === color.hex_code);
+        const willBase = baseIdx < 0;
+        if (willBase) {
+            if (genBases.length >= 2) return;
+            genBases.push({...color});
+        } else {
+            genBases.splice(baseIdx, 1);
+        }
+        btn.classList.toggle('active', willBase);
+        const card = btn.closest('.color-card');
+        let label = card.querySelector('.color-base-label');
+        if (willBase) {
+            if (!label) { label = document.createElement('div'); label.className = 'color-base-label'; card.prepend(label); }
+            label.textContent = 'Flood';
+            label.style.display = '';
+        } else if (label) {
+            label.style.display = 'none';
+        }
     }
 
     async function doGenerate(prompt, baseColorsHints) {
@@ -1034,20 +1063,24 @@
         btn.disabled = true; btn.textContent = 'Generating...';
         result.innerHTML = '<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
         const prevLocked = lockedColors.slice();
+        const prevGenBases = genBases.slice();
         try {
             const r = await fetch('/palette/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt, num_colors: cfgNumColors, base_colors: baseColorsHints||[]})});
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
-            if (prevLocked.length > 0) {
+            if (prevLocked.length > 0 || prevGenBases.length > 0) {
                 data.colors = data.colors.map(c => {
                     if (c.role === 'base') {
-                        const orig = prevLocked.find(lc => lc.hex_code === c.hex_code);
-                        if (orig) return {...orig, role: 'locked'};
+                        const wasBase = prevGenBases.find(b => b.hex_code === c.hex_code);
+                        if (wasBase) return {...wasBase, role: 'base'};
+                        const wasLocked = prevLocked.find(l => l.hex_code === c.hex_code);
+                        if (wasLocked) return {...wasLocked, role: 'locked'};
                     }
                     return c;
                 });
             }
             lastPalette = data;
+            genBases = data.colors.filter(c => c.role === 'base').map(c => ({...c}));
             lockedColors = data.colors.filter(c => c.role === 'locked').map(c => ({...c}));
             renderPalette(data, 'paletteResult', true, true);
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
@@ -1057,13 +1090,19 @@
     async function generatePalette() {
         const prompt = document.getElementById('promptInput').value.trim();
         if (!prompt) { document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>'; return; }
+        genBases = []; lockedColors = [];
         await doGenerate(prompt, []);
     }
 
     async function regenerateGen() {
         const prompt = document.getElementById('promptInput').value.trim();
         if (!prompt) return;
-        await doGenerate(prompt, lockedColors.map(c => ({hex: c.hex_code, name: c.name})));
+        const seen = new Set();
+        const hints = [];
+        for (const c of [...genBases, ...lockedColors]) {
+            if (!seen.has(c.hex_code)) { seen.add(c.hex_code); hints.push({hex: c.hex_code, name: c.name}); }
+        }
+        await doGenerate(prompt, hints);
     }
 
     let suggestedPalettes = [];
