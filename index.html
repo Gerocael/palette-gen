@@ -200,8 +200,9 @@
         .suggest-card-swatch.is-base::after { content: 'FLOOD'; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); font-size: 0.45rem; font-weight: 700; letter-spacing: 0.8px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
         .suggest-card-body { padding: 16px 20px; }
         .color-base-label { font-size: 0.55rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.65; margin-bottom: 4px; }
-        .gen-base-toggle { position: absolute; top: 10px; right: 10px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.18); color: inherit; border: 1px solid rgba(255,255,255,0.32); cursor: pointer; transition: background 0.15s; }
-        .gen-base-toggle.active { background: rgba(0,0,0,0.38); border-color: rgba(255,255,255,0.7); }
+        .color-save-star { position: absolute; top: 6px; right: 8px; font-size: 1.15rem; line-height: 1; background: none; border: none; cursor: pointer; color: inherit; opacity: 0.3; padding: 2px; transition: opacity 0.15s, transform 0.1s; }
+        .color-save-star:hover { opacity: 0.65; }
+        .color-save-star.active { opacity: 1; transform: scale(1.1); }
         .gen-reflood-row { padding: 0 0 4px; }
         .gen-reflood-row .save-btn { font-weight: 600; }
         .suggest-card-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); margin-bottom: 4px; }
@@ -921,18 +922,26 @@
         html += `<div class="palette-grid active" style="grid-template-columns:repeat(${numCols},1fr)">`;
         data.colors.forEach((color, i) => {
             const tc = getTextColor(color.hex_code);
-            const isFlood = color.role === 'base' && !allowBaseSelect;
-            const isSaved = (color.role === 'locked') || (color.role === 'base' && allowBaseSelect);
             const note = pigmentNotes[i];
-            const showToggle = allowBaseSelect && !isSaved;
-            html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
-                ${isFlood ? `<div class="color-base-label">Flood</div>` : ''}
-                ${isSaved ? `<div class="color-base-label">Saved</div>` : ''}
-                ${showToggle ? `<button class="gen-base-toggle" data-idx="${i}" onclick="toggleLockColor(this)">Save</button>` : ''}
-                ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
-                <div class="color-hex">${color.hex_code}</div>
-                ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
-            </div>`;
+            if (allowBaseSelect) {
+                const isSaved = lockedColors.some(lc => lc.hex_code === color.hex_code);
+                const showFlood = isSaved && floodMode;
+                html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
+                    <div class="color-base-label" id="gen-flood-label-${i}"${showFlood ? '' : ' style="display:none"'}>Flood</div>
+                    <button class="color-save-star${isSaved ? ' active' : ''}" data-idx="${i}" onclick="toggleLockColor(this)">${isSaved ? '★' : '☆'}</button>
+                    ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
+                    <div class="color-hex">${color.hex_code}</div>
+                    ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
+                </div>`;
+            } else {
+                const isBase = color.role === 'base';
+                html += `<div class="color-card" style="background:${color.hex_code};color:${tc}">
+                    ${isBase ? `<div class="color-base-label">Flood</div>` : ''}
+                    ${color.pour_ratio ? `<div class="color-ratio">${color.pour_ratio}%</div>` : ''}
+                    <div class="color-hex">${color.hex_code}</div>
+                    ${note ? `<div class="color-behavior">${behaviorArrow(note.behavior)} ${note.behavior}</div>` : ''}
+                </div>`;
+            }
         });
         html += '</div>';
         html += `<div class="download-wrapper">
@@ -1007,14 +1016,17 @@
         const idx = parseInt(btn.dataset.idx);
         const color = lastPalette.colors[idx];
         const lockedIdx = lockedColors.findIndex(c => c.hex_code === color.hex_code);
-        if (lockedIdx >= 0) {
-            lockedColors.splice(lockedIdx, 1);
-            btn.classList.remove('active');
-        } else {
+        const willLock = lockedIdx < 0;
+        if (willLock) {
             if (lockedColors.length >= cfgNumColors - 1) return;
-            lockedColors.push(color);
-            btn.classList.add('active');
+            lockedColors.push({...color});
+        } else {
+            lockedColors.splice(lockedIdx, 1);
         }
+        btn.classList.toggle('active', willLock);
+        btn.textContent = willLock ? '★' : '☆';
+        const floodLabel = document.getElementById(`gen-flood-label-${idx}`);
+        if (floodLabel) floodLabel.style.display = willLock && floodMode ? '' : 'none';
     }
 
     async function doGenerate(prompt, baseColorsHints) {
@@ -1036,7 +1048,7 @@
                 });
             }
             lastPalette = data;
-            lockedColors = [];
+            lockedColors = data.colors.filter(c => c.role === 'locked').map(c => ({...c}));
             renderPalette(data, 'paletteResult', true, true);
         } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
         finally { btn.disabled = false; btn.textContent = 'Generate'; }
