@@ -28,7 +28,9 @@
         body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--tx); min-height: 100vh; transition: background 0.2s, color 0.2s; }
         .nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(10px); border-bottom: 1px solid var(--bd-s); padding: 14px 24px; }
         .nav-inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; gap: 16px; }
-        .nav-brand { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); margin-right: auto; }
+        .nav-brand { display: flex; flex-direction: column; gap: 1px; margin-right: auto; text-decoration: none; }
+        .nav-brand-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); line-height: 1.2; }
+        .nav-brand-sub { font-size: 0.68rem; color: var(--tx-3); letter-spacing: 0.2px; line-height: 1; }
         .nav-btn { padding: 8px 16px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .nav-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
         .nav-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
@@ -55,9 +57,7 @@
         .config-stepper-btn:hover { background: var(--surf-h); color: var(--tx-2); border-color: var(--bd-h); transform: none; }
         .config-stepper-val { width: 32px; height: 28px; background: var(--surf); border-top: 1px solid var(--bd); border-bottom: 1px solid var(--bd); color: var(--tx); font-size: 0.85rem; text-align: center; display: flex; align-items: center; justify-content: center; user-select: none; }
         .container { flex: 1; min-width: 0; padding: 40px 0; }
-        h1 { font-family: 'DM Serif Display', serif; font-size: 3rem; letter-spacing: -1px; margin-bottom: 6px; color: var(--tx-b); }
-        .subtitle { color: var(--tx-3); font-size: 0.95rem; margin-bottom: 48px; }
-        .section { display: none; }
+.section { display: none; }
         .section.active { display: block; }
         .section-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 8px; color: var(--tx-2); }
         .section-desc { color: var(--tx-3); font-size: 0.85rem; margin-bottom: 20px; }
@@ -287,7 +287,7 @@
             .config-item { margin-bottom: 0; }
         }
         @media (max-width: 600px) {
-            h1 { font-size: 2rem; } .nav-brand { display: none; } .nav-inner { gap: 8px; } .nav-btn { padding: 8px 12px; font-size: 0.8rem; }
+            .nav-brand-sub { display: none; } .nav-inner { gap: 8px; } .nav-btn { padding: 8px 12px; font-size: 0.8rem; }
             .color-card { min-height: 160px; padding: 10px 8px; }
             .color-ratio { font-size: 0.7rem; top: 8px; left: 8px; } .input-group { flex-direction: column; } .mix-inputs { flex-wrap: wrap; }
             .recipe-row { gap: 10px; }
@@ -298,7 +298,10 @@
 <body>
     <div id="shelfTooltip"><div class="tt-name" id="ttName"></div><div class="tt-code" id="ttCode"></div><div class="tt-hex" id="ttHex"></div></div>
     <nav class="nav"><div class="nav-inner">
-        <a class="nav-brand" href="/" style="text-decoration:none;color:inherit">Palette Gen</a>
+        <a class="nav-brand" href="/">
+            <span class="nav-brand-name">Palette Gen</span>
+            <span class="nav-brand-sub">Amsterdam Standard Series acrylics</span>
+        </a>
         <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
         <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
         <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
@@ -333,9 +336,7 @@
         </div>
     </aside>
     <div class="container">
-        <h1>Palette Gen</h1>
-        <p class="subtitle">AI-powered color palettes for acrylic pour painters · tube data based on Amsterdam Standard Series acrylics</p>
-        <div class="section active" id="generateSection">
+<div class="section active" id="generateSection">
             <p class="section-title">Generate a palette</p>
             <p class="section-desc">Describe a mood or scene and get a full pour palette with mixing recipes.</p>
             <div class="input-group">
