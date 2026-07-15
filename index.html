@@ -198,6 +198,13 @@
         .mult-btn:hover { border-color: var(--bd-h); color: var(--tx-2); }
         .mult-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
         .mult-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+        .mix-mode-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+        .mix-tab-btn { padding: 7px 16px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; background: var(--surf-2); color: var(--tx-3); border: 1px solid var(--bd); cursor: pointer; transition: all 0.15s; }
+        .mix-tab-btn:hover { background: var(--surf-h); color: var(--tx-2); transform: none; }
+        .mix-tab-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
+        .color-mix-btn { position: absolute; top: 8px; right: 8px; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; background: rgba(0,0,0,0.28); color: #fff; border: none; border-radius: 4px; padding: 3px 7px; cursor: pointer; opacity: 0; transition: opacity 0.15s; transform: none; }
+        .color-card:hover .color-mix-btn { opacity: 1; }
+        .color-mix-btn:hover { background: rgba(0,0,0,0.5); }
         .mult-custom { width: 44px; }
         .guide-steps { margin-top: 16px; }
         .guide-steps ol { margin: 8px 0 0 20px; padding: 0; color: var(--tx-2); font-size: 0.85rem; line-height: 1.6; }
@@ -289,7 +296,7 @@
         <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
         <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
         <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
-        <button class="nav-btn" onclick="showSection('primariesSection',this)">Primaries</button>
+
         <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
         <button class="nav-btn theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
     </div></nav>
@@ -333,36 +340,59 @@
         </div>
         <div class="divider"></div>
         <div class="section" id="mixSection">
-            <p class="section-title">Mix two colors</p>
-            <p class="section-desc">See what two colors produce when poured together.</p>
-            <div class="mix-inputs">
-                <div class="tube-picker" id="mixPicker1">
-                    <div class="tube-picker-trigger" onclick="toggleTubePicker('mixPicker1')">
-                        <div class="tube-picker-swatch" id="mixSwatch1"></div>
-                        <span class="tube-picker-name" id="mixName1">Pick a tube…</span>
-                        <span class="tube-picker-caret">▾</span>
-                    </div>
-                    <div class="tube-picker-dropdown" id="mixDropdown1">
-                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'mixChips1')" />
-                        <div class="tube-picker-chips" id="mixChips1"></div>
-                    </div>
-                </div>
-                <span class="mix-plus">+</span>
-                <div class="tube-picker" id="mixPicker2">
-                    <div class="tube-picker-trigger" onclick="toggleTubePicker('mixPicker2')">
-                        <div class="tube-picker-swatch" id="mixSwatch2"></div>
-                        <span class="tube-picker-name" id="mixName2">Pick a tube…</span>
-                        <span class="tube-picker-caret">▾</span>
-                    </div>
-                    <div class="tube-picker-dropdown" id="mixDropdown2">
-                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'mixChips2')" />
-                        <div class="tube-picker-chips" id="mixChips2"></div>
-                    </div>
-                </div>
-                <button class="mix-shuffle-btn" onclick="randomizeMixColors()" title="Pick random Amsterdam colours">&#8645;</button>
-                <button id="mixBtn" onclick="mixColors()">Mix</button>
+            <div class="mix-mode-tabs">
+                <button class="mix-tab-btn active" onclick="setMixTab('two',this)">Mix two tubes</button>
+                <button class="mix-tab-btn" onclick="setMixTab('primaries',this)">From primaries</button>
             </div>
-            <div id="mixResult" class="mix-result"></div>
+            <div id="mixTwoTab">
+                <p class="section-desc">See what two colors produce when poured together.</p>
+                <div class="mix-inputs">
+                    <div class="tube-picker" id="mixPicker1">
+                        <div class="tube-picker-trigger" onclick="toggleTubePicker('mixPicker1')">
+                            <div class="tube-picker-swatch" id="mixSwatch1"></div>
+                            <span class="tube-picker-name" id="mixName1">Pick a tube…</span>
+                            <span class="tube-picker-caret">▾</span>
+                        </div>
+                        <div class="tube-picker-dropdown" id="mixDropdown1">
+                            <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'mixChips1')" />
+                            <div class="tube-picker-chips" id="mixChips1"></div>
+                        </div>
+                    </div>
+                    <span class="mix-plus">+</span>
+                    <div class="tube-picker" id="mixPicker2">
+                        <div class="tube-picker-trigger" onclick="toggleTubePicker('mixPicker2')">
+                            <div class="tube-picker-swatch" id="mixSwatch2"></div>
+                            <span class="tube-picker-name" id="mixName2">Pick a tube…</span>
+                            <span class="tube-picker-caret">▾</span>
+                        </div>
+                        <div class="tube-picker-dropdown" id="mixDropdown2">
+                            <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'mixChips2')" />
+                            <div class="tube-picker-chips" id="mixChips2"></div>
+                        </div>
+                    </div>
+                    <button class="mix-shuffle-btn" onclick="randomizeMixColors()" title="Pick random Amsterdam colours">&#8645;</button>
+                    <button id="mixBtn" onclick="mixColors()">Mix</button>
+                </div>
+                <div id="mixResult" class="mix-result"></div>
+            </div>
+            <div id="mixPrimariesTab" style="display:none">
+                <p class="section-desc">Pick any Amsterdam tube and get a recipe using only the 5 primaries: Yellow 275, Magenta 369, Cyan 572, White 105, Oxide Black 735.</p>
+                <div class="mix-inputs">
+                    <div class="tube-picker" id="primariesPicker">
+                        <div class="tube-picker-trigger" onclick="toggleTubePicker('primariesPicker')">
+                            <div class="tube-picker-swatch" id="primariesSwatch"></div>
+                            <span class="tube-picker-name" id="primariesName">Pick a target tube…</span>
+                            <span class="tube-picker-caret">▾</span>
+                        </div>
+                        <div class="tube-picker-dropdown" id="primariesDropdown">
+                            <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'primariesChips')" />
+                            <div class="tube-picker-chips" id="primariesChips"></div>
+                        </div>
+                    </div>
+                    <button id="primariesBtn" onclick="getPrimariesMix()">Get recipe</button>
+                </div>
+                <div id="primariesResult"></div>
+            </div>
         </div>
         <div class="divider"></div>
         <div class="section" id="complementSection">
@@ -398,26 +428,6 @@
                 <button id="complementBtn" onclick="suggestComplement()">Suggest</button>
             </div>
             <div id="complementResult"></div>
-        </div>
-        <div class="divider"></div>
-        <div class="section" id="primariesSection">
-            <p class="section-title">Mix from primaries</p>
-            <p class="section-desc">Pick any Amsterdam tube and get a recipe using only the 5 primaries: Yellow 275, Magenta 369, Cyan 572, White 105, Oxide Black 735.</p>
-            <div class="mix-inputs">
-                <div class="tube-picker" id="primariesPicker">
-                    <div class="tube-picker-trigger" onclick="toggleTubePicker('primariesPicker')">
-                        <div class="tube-picker-swatch" id="primariesSwatch"></div>
-                        <span class="tube-picker-name" id="primariesName">Pick a target tube…</span>
-                        <span class="tube-picker-caret">▾</span>
-                    </div>
-                    <div class="tube-picker-dropdown" id="primariesDropdown">
-                        <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'primariesChips')" />
-                        <div class="tube-picker-chips" id="primariesChips"></div>
-                    </div>
-                </div>
-                <button id="primariesBtn" onclick="getPrimariesMix()">Get recipe</button>
-            </div>
-            <div id="primariesResult"></div>
         </div>
         <div class="section" id="shelfSection">
             <p class="section-title">Pour from my shelf</p>
@@ -734,6 +744,37 @@
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
+    function setMixTab(mode, btn) {
+        document.querySelectorAll('.mix-tab-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        document.getElementById('mixTwoTab').style.display = mode === 'two' ? '' : 'none';
+        document.getElementById('mixPrimariesTab').style.display = mode === 'primaries' ? '' : 'none';
+    }
+
+    function mixForMe(hex, name) {
+        // Prefer the actual Amsterdam tube hex over the AI-generated palette hex
+        const nl = name.toLowerCase().trim();
+        const nb = nl.replace(/\s*\d+\s*$/, '').trim();
+        const hit = allTubes.find(t => {
+            const tl = t.tube.toLowerCase().trim();
+            return tl === nl || tl.replace(/\s*\d+\s*$/, '').trim() === nb;
+        });
+        const targetHex = hit ? hit.hex : hex;
+        const shelfBtn = document.querySelector('.nav-btn[onclick*="shelfSection"]');
+        showSection('shelfSection', shelfBtn);
+        document.getElementById('shelfMixColor').value = targetHex;
+        document.getElementById('shelfMixName').value = name;
+        if (selectedTubes && selectedTubes.size > 0) {
+            doShelfMix();
+        } else {
+            document.getElementById('shelfMixResult').innerHTML = '<div class="error">Add some tubes to your shelf first, then we can find a mix for this colour.</div>';
+        }
+        setTimeout(() => {
+            const panel = document.querySelector('.shelf-mix-panel');
+            if (panel) panel.scrollIntoView({behavior: 'smooth'});
+        }, 100);
+    }
+
     let mixTube1 = null, mixTube2 = null;
     let compTube1 = null, compTube2 = null;
     let primariesTube = null, lastPrimariesMix = null, primariesMultiplier = 1;
@@ -988,7 +1029,7 @@
         data.colors.forEach((color, i) => {
             const tc = getTextColor(color.hex_code);
             const note = pigmentNotes[i];
-            html += `<div class="color-card" style="background:${color.hex_code};color:${tc}"><div class="color-hex">${color.hex_code}</div></div>`;
+            html += `<div class="color-card" style="background:${color.hex_code};color:${tc}"><div class="color-hex">${color.hex_code}</div><button class="color-mix-btn" onclick="mixForMe('${color.hex_code}','${color.name.replace(/'/g,"\\'")}')">Mix</button></div>`;
         });
         html += `</div>`; // close palette-grid
         if (allowBaseSelect) {
@@ -1247,8 +1288,21 @@
             document.getElementById('shelfMixResult').innerHTML = '<div class="error">Select at least one tube from your shelf first.</div>';
             return;
         }
-        const targetHex = document.getElementById('shelfMixColor').value;
         const targetName = document.getElementById('shelfMixName').value.trim();
+        // If the name matches a known Amsterdam tube, use its actual hex for accuracy
+        let targetHex = document.getElementById('shelfMixColor').value;
+        if (targetName) {
+            const nl = targetName.toLowerCase().trim();
+            const nb = nl.replace(/\s*\d+\s*$/, '').trim();
+            const hit = allTubes.find(t => {
+                const tl = t.tube.toLowerCase().trim();
+                return tl === nl || tl.replace(/\s*\d+\s*$/, '').trim() === nb;
+            });
+            if (hit) {
+                targetHex = hit.hex;
+                document.getElementById('shelfMixColor').value = targetHex;
+            }
+        }
         const btn = document.getElementById('shelfMixBtn');
         const result = document.getElementById('shelfMixResult');
         btn.disabled = true; btn.textContent = 'Mixing...';

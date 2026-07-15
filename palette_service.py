@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
-from color_mixing import find_best_mix, hex_to_lab, delta_e
+from color_mixing import find_best_mix
 
 load_dotenv()
 
@@ -659,9 +659,13 @@ def generate_shelf_mix(target_name: str, target_hex: str, shelf_tubes: list[dict
     Mix target_hex from shelf_tubes using KM optimisation + AI refinement.
     shelf_tubes: [{tube: str, hex: str}, ...]
     """
-    # Direct tube match — no mixing needed
+    target_lower = target_name.lower().strip()
+    target_base = re.sub(r'\s*\d+\s*$', '', target_lower).strip()
+    # Direct tube match — exact name or matching base name (ignoring catalogue number)
     for t in shelf_tubes:
-        if t.get("tube", "").lower().strip() == target_name.lower().strip():
+        tube_lower = t.get("tube", "").lower().strip()
+        tube_base = re.sub(r'\s*\d+\s*$', '', tube_lower).strip()
+        if tube_lower == target_lower or (target_base and tube_base == target_base):
             return {
                 "mixRecipe": [{"tube": t["tube"], "tubeHex": t.get("hex", "#888"), "grams": 1}],
                 "steps": [f"You already have {t['tube']} — use it directly from the tube. No mixing needed."],
