@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from palette_service import generate_palette, mix_colors, suggest_from_shelf, suggest_complementary_colors, generate_primary_mix
+from palette_service import generate_palette, mix_colors, suggest_from_shelf, suggest_complementary_colors, generate_primary_mix, generate_shelf_mix
 from pigment_analysis import analyze_palette_pigments
 from datetime import datetime, date, timezone
 
@@ -279,6 +279,51 @@ def mix_from_primaries(request: PrimariesMixRequest, req: Request):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate primaries recipe: {str(e)}")
+
+class ShelfMixRequest(BaseModel):
+    target_name: str = ""
+    target_hex: str = "#888888"
+    shelf_tubes: list[dict] = []
+
+class ShelfMixResponse(BaseModel):
+    target_hex: str
+    predicted_hex: str
+    color_name: str
+    mix_recipe: list[MixIngredient]
+    steps: list[str]
+    notes: str
+    delta_e: float
+    recipe_warning: str = ""
+
+@app.post("/palette/mix-from-shelf")
+def mix_from_shelf_endpoint(request: ShelfMixRequest, req: Request):
+    if not request.shelf_tubes:
+        raise HTTPException(status_code=400, detail="Add at least one tube to your shelf")
+    if not request.target_hex.startswith("#"):
+        raise HTTPException(status_code=400, detail="Provide a valid target hex color")
+    check_rate_limit(req.client.host, "shelf_mix")
+    try:
+        result = generate_shelf_mix(request.target_name, request.target_hex, request.shelf_tubes)
+        color = build_colors([{
+            "hexCode": request.target_hex,
+            "colorName": request.target_name or request.target_hex,
+            "mixRecipe": result.get("mixRecipe", [])
+        }])[0]
+        steps = [str(s) for s in (result.get("steps") or []) if s]
+        return ShelfMixResponse(
+            target_hex=request.target_hex,
+            predicted_hex=result.get("predictedHex", request.target_hex),
+            color_name=request.target_name or request.target_hex,
+            mix_recipe=color.mix_recipe or [],
+            steps=steps,
+            notes=str(result.get("notes") or ""),
+            delta_e=float(result.get("deltaE", 0)),
+            recipe_warning=str(result.get("warning") or ""),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to compute shelf mix: {str(e)}")
 
 @app.get("/")
 def serve_frontend():

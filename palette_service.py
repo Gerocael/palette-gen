@@ -7,6 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
+from color_mixing import find_best_mix, hex_to_lab, delta_e
 
 load_dotenv()
 
@@ -529,6 +530,170 @@ No other text. Just the JSON."""),
 ])
 
 primaries_notes_chain = primaries_notes_prompt | llm | parser
+
+
+# --- Mix from shelf: KM optimiser + LangGraph refinement ---
+
+shelf_mix_prompt = ChatPromptTemplate.from_messages([
+    ("system", """You are a color mixing expert for acrylic pour painters.
+An algorithm has computed the best mix of the user's available paint tubes to approximate a target color.
+Write practical guidance for executing this mix.
+Respond ONLY with a JSON object containing:
+- steps: array of 3-4 concise plain-English steps for physically mixing these paints in order (mention tube names, start with the dominant tube, avoid mentioning grams — the user picks their batch size)
+- notes: one honest sentence on how close this approximation gets and any pigment character differences (opacity, transparency, tinting strength) to be aware of
+No other text. Just the JSON."""),
+    ("human", """Target: {target_name} ({target_hex})
+Recipe: {recipe_desc}
+Predicted result hex: {predicted_hex}
+ΔE from target: {delta_e:.1f} (< 5 = visually close · 5–10 = reasonable · > 15 = approximate)
+Write mixing steps and an accuracy note."""),
+])
+
+shelf_mix_chain = shelf_mix_prompt | llm | parser
+
+
+class ShelfMixState(TypedDict):
+    target_name: str
+    target_hex: str
+    shelf_tubes: list          # [{tube: str, hex: str}]
+    max_components: int
+    recipe: list               # [{tube, tubeHex, grams}]
+    fractions: dict            # {tube_name: fraction}
+    delta_e: float
+    predicted_hex: str
+    steps: list
+    notes: str
+    warning: str
+
+
+def _km_compute(state: ShelfMixState) -> dict:
+    """Run KM optimisation to find the best mix."""
+    tube_hex_map = {
+        t["tube"]: t["hex"]
+        for t in state["shelf_tubes"]
+        if t.get("tube") and t.get("hex")
+    }
+    fractions, de, predicted = find_best_mix(
+        state["target_hex"], tube_hex_map, max_components=state["max_components"]
+    )
+    # Scale fractions to grams targeting ~15g total
+    min_frac = min(fractions.values())
+    scale = max(1.0 / min_frac, 5.0)
+    total_raw = sum(v * scale for v in fractions.values())
+    if total_raw < 10:
+        scale *= 15 / total_raw
+    recipe = []
+    for tube_name, frac in sorted(fractions.items(), key=lambda x: -x[1]):
+        grams = round(frac * scale)
+        if grams >= 1:
+            recipe.append({
+                "tube": tube_name,
+                "tubeHex": tube_hex_map[tube_name],
+                "grams": grams,
+            })
+    return {"recipe": recipe, "fractions": fractions, "delta_e": de, "predicted_hex": predicted}
+
+
+def _should_expand(state: ShelfMixState) -> str:
+    """If match is poor and we haven't tried all tubes yet, widen the search."""
+    if state["delta_e"] > 12 and state["max_components"] < 5:
+        return "expand"
+    return "refine"
+
+
+def _expand(state: ShelfMixState) -> dict:
+    return {"max_components": state["max_components"] + 2}
+
+
+def _ai_refine(state: ShelfMixState) -> dict:
+    """Ask the AI for mixing steps and an accuracy note."""
+    recipe_desc = ", ".join(
+        f"{ing['tube']} (~{round(state['fractions'].get(ing['tube'], 0) * 100)}%)"
+        for ing in state["recipe"]
+    )
+    try:
+        ai = shelf_mix_chain.invoke({
+            "target_name": state["target_name"] or state["target_hex"],
+            "target_hex": state["target_hex"],
+            "recipe_desc": recipe_desc,
+            "predicted_hex": state["predicted_hex"],
+            "delta_e": state["delta_e"],
+        })
+        if not isinstance(ai, dict):
+            ai = {}
+    except Exception:
+        ai = {}
+    de = state["delta_e"]
+    if de > 15:
+        warning = (
+            f"Approximate match (ΔE {de:.0f}) — the closest achievable with your shelf. "
+            "Adding a tube closer to the target would improve accuracy."
+        )
+    elif de > 8:
+        warning = f"Reasonable match (ΔE {de:.0f}) — expect some difference from the target, particularly in chroma or value."
+    else:
+        warning = ""
+    steps = ai.get("steps") or []
+    if not isinstance(steps, list):
+        steps = []
+    return {
+        "steps": [str(s) for s in steps if s],
+        "notes": str(ai.get("notes") or ""),
+        "warning": warning,
+    }
+
+
+_shelf_graph = StateGraph(ShelfMixState)
+_shelf_graph.add_node("compute", _km_compute)
+_shelf_graph.add_node("expand", _expand)
+_shelf_graph.add_node("refine", _ai_refine)
+_shelf_graph.set_entry_point("compute")
+_shelf_graph.add_conditional_edges("compute", _should_expand, {"expand": "expand", "refine": "refine"})
+_shelf_graph.add_edge("expand", "compute")
+_shelf_graph.add_edge("refine", END)
+shelf_mix_graph = _shelf_graph.compile()
+
+
+def generate_shelf_mix(target_name: str, target_hex: str, shelf_tubes: list[dict]) -> dict:
+    """
+    Mix target_hex from shelf_tubes using KM optimisation + AI refinement.
+    shelf_tubes: [{tube: str, hex: str}, ...]
+    """
+    # Direct tube match — no mixing needed
+    for t in shelf_tubes:
+        if t.get("tube", "").lower().strip() == target_name.lower().strip():
+            return {
+                "mixRecipe": [{"tube": t["tube"], "tubeHex": t.get("hex", "#888"), "grams": 1}],
+                "steps": [f"You already have {t['tube']} — use it directly from the tube. No mixing needed."],
+                "notes": "Direct tube match — no mixing required.",
+                "targetHex": target_hex,
+                "predictedHex": t.get("hex", target_hex),
+                "deltaE": 0.0,
+                "warning": "",
+            }
+
+    result = shelf_mix_graph.invoke({
+        "target_name": target_name,
+        "target_hex": target_hex,
+        "shelf_tubes": shelf_tubes,
+        "max_components": 3,
+        "recipe": [],
+        "fractions": {},
+        "delta_e": 999.0,
+        "predicted_hex": target_hex,
+        "steps": [],
+        "notes": "",
+        "warning": "",
+    })
+    return {
+        "mixRecipe": result["recipe"],
+        "steps": result["steps"],
+        "notes": result["notes"],
+        "targetHex": target_hex,
+        "predictedHex": result["predicted_hex"],
+        "deltaE": round(result["delta_e"], 1),
+        "warning": result["warning"],
+    }
 
 
 def generate_primary_mix(target_tube: str, target_hex: str = "") -> dict:

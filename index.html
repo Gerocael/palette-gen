@@ -141,6 +141,25 @@
         .recipe-total-grams { font-size: 0.75rem; color: var(--tx-3); font-weight: 500; }
         .recipe-grand-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 4px; margin-top: 8px; border-top: 1px solid var(--bd-m); font-size: 0.85rem; color: var(--tx-2); font-weight: 500; }
         .recipe-disclaimer { font-size: 0.75rem; font-style: italic; color: var(--tx-3); margin-top: 14px; line-height: 1.5; }
+        .shelf-mix-panel { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--bd-f); }
+        .shelf-mix-inputs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .shelf-mix-picker-wrap { position: relative; width: 42px; height: 42px; border-radius: 8px; overflow: hidden; border: 1px solid var(--bd-m); flex-shrink: 0; }
+        .shelf-mix-colorpicker { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); border: none; padding: 0; cursor: pointer; }
+        .shelf-mix-name { flex: 1; min-width: 160px; }
+        #shelfMixBtn { padding: 10px 20px; font-weight: 600; white-space: nowrap; }
+        .shelf-mix-result-card { background: var(--surf); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+        .shelf-mix-swatches { display: flex; height: 72px; }
+        .shelf-mix-swatch { flex: 1; }
+        .shelf-mix-swatch-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.7; padding: 6px 10px; }
+        .shelf-mix-de { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+        .shelf-mix-de.good { background: #1a5c2a22; color: #1a5c2a; }
+        .shelf-mix-de.ok { background: #7c5a0022; color: #7c5a00; }
+        .shelf-mix-de.rough { background: #7c1a0022; color: #7c1a00; }
+        @media (prefers-color-scheme: dark) {
+            .shelf-mix-de.good { background: #1a5c2a55; color: #4caf50; }
+            .shelf-mix-de.ok   { background: #7c5a0055; color: #ffa726; }
+            .shelf-mix-de.rough{ background: #7c1a0055; color: #ef5350; }
+        }
         .recipe-warning { font-size: 0.8rem; background: #7c4a001a; border-left: 3px solid #c07a00; color: #7c4a00; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; line-height: 1.5; }
         @media (prefers-color-scheme: dark) { .recipe-warning { background: #7c4a0033; color: #f0a830; border-color: #f0a830; } }
         :root[data-theme="dark"] .recipe-warning { background: #7c4a0033; color: #f0a830; border-color: #f0a830; }
@@ -419,6 +438,19 @@
             </div>
             <button id="suggestBtn" onclick="suggestPalettes()">Suggest palettes</button>
             <div id="suggestResult" style="margin-top:24px;"></div>
+
+            <div class="shelf-mix-panel">
+                <p class="section-title" style="font-size:1rem;margin-bottom:4px">Mix a colour from your shelf</p>
+                <p class="section-desc" style="margin-bottom:14px">Pick a target colour and we'll find the best mix from the tubes you own using paint physics.</p>
+                <div class="shelf-mix-inputs">
+                    <div class="shelf-mix-picker-wrap">
+                        <input type="color" id="shelfMixColor" value="#3a6ea5" class="shelf-mix-colorpicker" />
+                    </div>
+                    <input type="text" id="shelfMixName" placeholder="Colour name (optional, e.g. Phthalo Blue)" class="shelf-mix-name" />
+                    <button id="shelfMixBtn" onclick="doShelfMix()">Find mix</button>
+                </div>
+                <div id="shelfMixResult" style="margin-top:16px;"></div>
+            </div>
         </div>
         <div class="footer">Built by Roland Gebe | <a href="https://github.com/gerocael/palette-gen">GitHub</a></div>
     </div></div>
@@ -1208,6 +1240,74 @@
         lastPalette = suggestedPalettes[idx];
         renderPalette(lastPalette,'pickedPalette',false);
         document.getElementById('pickedPalette').scrollIntoView({behavior:'smooth'});
+    }
+
+    async function doShelfMix() {
+        if (selectedTubes.size < 1) {
+            document.getElementById('shelfMixResult').innerHTML = '<div class="error">Select at least one tube from your shelf first.</div>';
+            return;
+        }
+        const targetHex = document.getElementById('shelfMixColor').value;
+        const targetName = document.getElementById('shelfMixName').value.trim();
+        const btn = document.getElementById('shelfMixBtn');
+        const result = document.getElementById('shelfMixResult');
+        btn.disabled = true; btn.textContent = 'Mixing...';
+        result.innerHTML = '<div class="loading">Running colour optimiser<span class="loading-dots"></span></div>';
+        const shelfTubes = Array.from(selectedTubes).map(tube => {
+            const t = allTubes.find(a => a.tube === tube);
+            return { tube, hex: t ? t.hex : '#888888' };
+        });
+        try {
+            const r = await fetch('/palette/mix-from-shelf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_name: targetName, target_hex: targetHex, shelf_tubes: shelfTubes })
+            });
+            if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
+            const d = await r.json();
+            const tc1 = getTextColor(d.target_hex);
+            const tc2 = getTextColor(d.predicted_hex);
+            const de = d.delta_e;
+            const deClass = de < 5 ? 'good' : de < 12 ? 'ok' : 'rough';
+            const deLabel = de < 5 ? 'Close match' : de < 12 ? 'Reasonable' : 'Approximate';
+            let html = `<div class="shelf-mix-result-card">
+                <div class="shelf-mix-swatches">
+                    <div class="shelf-mix-swatch" style="background:${d.target_hex}">
+                        <div class="shelf-mix-swatch-label" style="color:${tc1}">Target</div>
+                    </div>
+                    <div class="shelf-mix-swatch" style="background:${d.predicted_hex}">
+                        <div class="shelf-mix-swatch-label" style="color:${tc2}">Result</div>
+                    </div>
+                </div>
+                <div style="padding:14px 16px">
+                    <span style="font-weight:600;font-size:0.9rem">${d.color_name || d.target_hex}</span>
+                    <span class="shelf-mix-de ${deClass}">ΔE ${de} · ${deLabel}</span>`;
+            if (d.recipe_warning) html += `<div class="recipe-warning" style="margin-top:10px">${d.recipe_warning}</div>`;
+            html += '<div class="recipe-section" style="margin-top:12px"><div class="recipe-heading">Recipe</div>';
+            const rt = d.mix_recipe.reduce((s, i) => s + i.grams, 0);
+            d.mix_recipe.forEach((ing, j) => {
+                const pct = Math.round((ing.grams / rt) * 100);
+                html += `<div class="recipe-ingredient">
+                    <div class="recipe-tube-swatch" style="background:${ing.tube_hex||'#888'}"></div>
+                    <span class="recipe-tube">${ing.tube}</span>
+                    <span class="recipe-pct">${pct}%</span>
+                    <span class="recipe-grams">${Math.round(ing.grams)}g</span>
+                </div>`;
+            });
+            if (d.mix_recipe.length > 1) {
+                html += `<div class="recipe-total"><span class="recipe-total-label">Total</span><span class="recipe-total-grams">${Math.round(rt)}g</span></div>`;
+            }
+            html += '</div>';
+            if (d.steps && d.steps.length) {
+                html += '<div class="recipe-section"><div class="recipe-heading">Steps</div><ol style="margin:0;padding-left:18px;font-size:0.82rem;color:var(--tx-2);line-height:1.8">';
+                d.steps.forEach(s => { html += `<li>${s}</li>`; });
+                html += '</ol></div>';
+            }
+            if (d.notes) html += `<div class="recipe-disclaimer" style="padding:0 16px 14px">${d.notes}</div>`;
+            html += '</div></div>';
+            result.innerHTML = html;
+        } catch(err) { result.innerHTML = `<div class="error">${err.message}</div>`; }
+        finally { btn.disabled = false; btn.textContent = 'Find mix'; }
     }
 
     async function mixColors() {
