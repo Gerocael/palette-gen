@@ -763,8 +763,6 @@
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const showConfig = id === 'generateSection' || id === 'shelfSection';
-        document.querySelector('.config-panel').style.display = showConfig ? '' : 'none';
     }
 
     function setMixTab(mode, btn) {
