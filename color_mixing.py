@@ -1,20 +1,16 @@
 """
-Kubelka-Munk paint-mixing optimiser.
+Kubelka-Munk paint-mixing model.
 
-The square-root weighting model is a well-known approximation of full KM theory
-that works from reflectance values (i.e. tube hex codes) without needing per-pigment
-absorption/scattering spectra.  It gives substantially better predictions than linear
-RGB blending for opaque paint systems.
+Square-root weighting approximation — works from tube hex codes as reflectance
+estimates without needing per-pigment spectral data.
 
   mixed_linear[c] = ( Σ wᵢ · √linearRGB(tubeᵢ)[c] )²
-
-We minimise ΔE (CIE 76) in L*a*b* space between the predicted mix and the target.
 """
 
 from __future__ import annotations
 import numpy as np
 from itertools import combinations
-from scipy.optimize import minimize
+from scipy.optimize import minimize_scalar, minimize
 
 
 # ---------------------------------------------------------------------------
@@ -76,14 +72,9 @@ def km_predict(tube_linears: np.ndarray, weights: np.ndarray) -> np.ndarray:
     return np.clip((weights @ sqrt_tubes) ** 2, 0, 1)
 
 
-def _objective(weights: np.ndarray, tube_linears: np.ndarray, target_lab: np.ndarray) -> float:
-    w = np.clip(weights, 0, 1)
-    s = w.sum()
-    if s < 1e-9:
-        return 1e6
-    w = w / s
-    mixed_lab = _linear_to_lab(km_predict(tube_linears, w))
-    return float(np.sum((mixed_lab - target_lab) ** 2))
+def _de_of_mix(lins: np.ndarray, weights: np.ndarray, target_lab: np.ndarray) -> tuple[float, np.ndarray]:
+    mixed = km_predict(lins, weights)
+    return delta_e(_linear_to_lab(mixed), target_lab), mixed
 
 
 # ---------------------------------------------------------------------------
@@ -97,101 +88,127 @@ def find_best_mix(
     force_blend: bool = False,
 ) -> tuple[dict[str, float], float, str]:
     """
-    Find optimal shelf-tube weights to minimise ΔE to target_hex.
+    Find the best recipe from tube_hex_map to approximate target_hex.
 
-    Pool sizes per component count (catches cross-hue combos like Yellow+Cyan→Green):
-        n=1 : all tubes
-        n=2 : all tubes  (fast SLSQP, cross-hue pairs matter)
-        n=3 : top 20
-        n=4 : top 12
-        n=5 : top 8
+    Strategy:
+    - n=1: pick the closest single tube (baseline)
+    - n=2: 1-D bounded optimisation (Brent) over ALL pairs — catches
+           cross-hue combos (e.g. Yellow+Cyan → Teal) that a naïve
+           closest-to-target pool would miss
+    - n=3: grid search over top-15 pool, then SLSQP refinement from
+           the best grid point
 
-    force_blend: when True each blend component is constrained to >= MIN_BLEND_FRAC
-    so the optimizer is forced to find meaningful proportions.  Any recipe with a
-    component < MIN_BLEND_FRAC would be impractical to measure anyway.  This also
-    guarantees that no component is dropped by the post-filter, so the returned
-    recipe is always 2+ tubes when a valid blend was found.
+    force_blend: if True and best single-tube ΔE > 3, always return a
+    multi-tube recipe even when it has a slightly higher ΔE — the user
+    asked for a mixing recipe, not a tube-identification answer.
 
-    Returns:
-        recipe     – {tube_name: weight_fraction}, fractions sum to 1
-        de         – achieved ΔE (CIE76)
-        predicted  – hex code of the KM-predicted mixture
+    Every blend component is constrained to ≥ MIN_FRAC so nothing is
+    too small to measure and the recipe is actionable.
     """
-    MIN_BLEND_FRAC = 0.08   # each blend ingredient must be >= 8 %
-    DROP_THRESHOLD = 0.05   # single-tube path: drop < 5% (unused in blend path)
+    MIN_FRAC = 0.10  # minimum fraction per blend component (10 %)
 
     tubes = list(tube_hex_map.keys())
+    n_tubes = len(tubes)
     linears = np.array([hex_to_linear(h) for h in tube_hex_map.values()])
     target_lab = hex_to_lab(target_hex)
 
-    tube_labs = [_linear_to_lab(lin) for lin in linears]
-    tube_de = [delta_e(target_lab, lab) for lab in tube_labs]
-    ranked = sorted(range(len(tubes)), key=lambda i: tube_de[i])
+    tube_de_vals = [delta_e(target_lab, _linear_to_lab(lin)) for lin in linears]
+    ranked = sorted(range(n_tubes), key=lambda i: tube_de_vals[i])
 
-    pool_limits = {1: len(tubes), 2: len(tubes), 3: 20, 4: 12, 5: 8}
+    # ---- best single tube ----
+    best_single_idx = ranked[0]
+    best_single_de = tube_de_vals[best_single_idx]
+    best_single_lin = linears[best_single_idx]
 
-    best_single_recipe: dict[str, float] = {tubes[ranked[0]]: 1.0}
-    best_single_de = tube_de[ranked[0]]
-    best_single_lin = linears[ranked[0]]
-
+    # ---- best blend ----
     best_blend_recipe: dict[str, float] | None = None
     best_blend_de = float("inf")
     best_blend_lin: np.ndarray | None = None
 
-    for n in range(1, max_components + 1):
-        pool = ranked[:min(pool_limits.get(n, 8), len(tubes))]
-        for combo in combinations(pool, n):
-            combo_lin = linears[list(combo)]
+    # n=2: 1-D Brent optimisation over every pair
+    if max_components >= 2 and n_tubes >= 2:
+        for i, j in combinations(range(n_tubes), 2):
+            lins_ij = np.stack([linears[i], linears[j]])
 
-            if n == 1:
-                de_val = tube_de[combo[0]]
-                if de_val < best_single_de:
-                    best_single_de = de_val
-                    best_single_lin = combo_lin[0]
-                    best_single_recipe = {tubes[combo[0]]: 1.0}
-                continue
+            def obj_1d(w1, lins=lins_ij):
+                w = np.array([w1, 1.0 - w1])
+                return float(np.sum((_linear_to_lab(km_predict(lins, w)) - target_lab) ** 2))
 
-            # Lower bound per component: 0 for accuracy-first mode,
-            # MIN_BLEND_FRAC for force_blend so every ingredient is
-            # measurable and survives the drop filter below.
-            lb = MIN_BLEND_FRAC if force_blend else 0.0
-            x0 = np.ones(n) / n
             try:
-                res = minimize(
-                    _objective,
-                    x0,
-                    args=(combo_lin, target_lab),
-                    method="SLSQP",
-                    bounds=[(lb, 1.0)] * n,
-                    constraints={"type": "eq", "fun": lambda w: w.sum() - 1},
-                    options={"ftol": 1e-7, "maxiter": 200},
-                )
-                w = np.clip(res.x, lb, 1.0)
-                w /= w.sum()
-                mixed = km_predict(combo_lin, w)
-                de_val = delta_e(_linear_to_lab(mixed), target_lab)
+                res = minimize_scalar(obj_1d, bounds=(MIN_FRAC, 1.0 - MIN_FRAC), method="bounded")
+                w1 = float(np.clip(res.x, MIN_FRAC, 1.0 - MIN_FRAC))
+                w = np.array([w1, 1.0 - w1])
+                de_val, mixed = _de_of_mix(lins_ij, w, target_lab)
                 if de_val < best_blend_de:
                     best_blend_de = de_val
                     best_blend_lin = mixed
-                    best_blend_recipe = {tubes[combo[i]]: float(w[j]) for j, i in enumerate(combo)}
+                    best_blend_recipe = {tubes[i]: w1, tubes[j]: 1.0 - w1}
             except Exception:
                 pass
 
-    # Prefer blend when it wins on ΔE, or when caller needs a recipe
+    # n=3: grid search (step 10 %) + SLSQP refinement
+    if max_components >= 3 and n_tubes >= 3:
+        pool = ranked[:min(15, n_tubes)]
+        STEP = 0.10
+        best_grid_keys: tuple | None = None
+        best_grid_w: np.ndarray | None = None
+
+        for combo in combinations(pool, 3):
+            lins_c = linears[list(combo)]
+            # iterate over the simplex at step resolution
+            w1 = STEP
+            while w1 <= 1.0 - 2 * STEP + 1e-9:
+                w2 = STEP
+                while w2 <= 1.0 - w1 - STEP + 1e-9:
+                    w3 = 1.0 - w1 - w2
+                    if w3 >= STEP - 1e-9:
+                        w = np.array([w1, w2, w3])
+                        de_val, mixed = _de_of_mix(lins_c, w, target_lab)
+                        if de_val < best_blend_de:
+                            best_blend_de = de_val
+                            best_blend_lin = mixed
+                            best_blend_recipe = {tubes[combo[k]]: float(w[k]) for k in range(3)}
+                            best_grid_keys = combo
+                            best_grid_w = w.copy()
+                    w2 += STEP
+                w1 += STEP
+
+        # Refine the best 3-component grid result with SLSQP
+        if best_grid_keys is not None and best_grid_w is not None:
+            lins_best = linears[list(best_grid_keys)]
+
+            def obj_3d(ww, lins=lins_best):
+                ww = np.clip(ww, 0, 1)
+                s = ww.sum()
+                if s < 1e-9:
+                    return 1e6
+                return float(np.sum((_linear_to_lab(km_predict(lins, ww / s)) - target_lab) ** 2))
+
+            try:
+                res3 = minimize(
+                    obj_3d, best_grid_w,
+                    method="SLSQP",
+                    bounds=[(MIN_FRAC, 1.0)] * 3,
+                    constraints={"type": "eq", "fun": lambda ww: ww.sum() - 1},
+                    options={"ftol": 1e-8, "maxiter": 300},
+                )
+                w_opt = np.clip(res3.x, MIN_FRAC, 1.0)
+                w_opt /= w_opt.sum()
+                de_opt, mixed_opt = _de_of_mix(lins_best, w_opt, target_lab)
+                if de_opt < best_blend_de:
+                    best_blend_de = de_opt
+                    best_blend_lin = mixed_opt
+                    best_blend_recipe = {tubes[best_grid_keys[k]]: float(w_opt[k]) for k in range(3)}
+            except Exception:
+                pass
+
+    # ---- decide: single or blend ----
     use_blend = best_blend_recipe is not None and (
         best_blend_de < best_single_de
         or (force_blend and best_single_de > 3)
     )
 
     if use_blend:
-        best_recipe, best_de, best_lin = best_blend_recipe, best_blend_de, best_blend_lin
+        return best_blend_recipe, best_blend_de, linear_to_hex(best_blend_lin)
     else:
-        best_recipe, best_de, best_lin = best_single_recipe, best_single_de, best_single_lin
-
-    # Drop negligible ingredients (only relevant for non-force_blend path)
-    if len(best_recipe) > 1:
-        best_recipe = {k: v for k, v in best_recipe.items() if v >= DROP_THRESHOLD}
-        total = sum(best_recipe.values())
-        best_recipe = {k: v / total for k, v in best_recipe.items()}
-
-    return best_recipe, best_de, linear_to_hex(best_lin)
+        return {tubes[best_single_idx]: 1.0}, best_single_de, linear_to_hex(best_single_lin)
