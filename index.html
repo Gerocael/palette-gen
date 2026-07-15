@@ -142,11 +142,12 @@
         .recipe-grand-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 0 4px; margin-top: 8px; border-top: 1px solid var(--bd-m); font-size: 0.85rem; color: var(--tx-2); font-weight: 500; }
         .recipe-disclaimer { font-size: 0.75rem; font-style: italic; color: var(--tx-3); margin-top: 14px; line-height: 1.5; }
         .shelf-mix-panel { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--bd-f); }
-        .shelf-seg-control { display: flex; border: 1.5px solid var(--bd); border-radius: 10px; overflow: hidden; margin-top: 20px; }
-        .shelf-seg-btn { flex: 1; padding: 8px 0; font-size: 0.82rem; font-weight: 600; background: transparent; color: var(--tx-3); border: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
-        .shelf-seg-btn + .shelf-seg-btn { border-left: 1.5px solid var(--bd); }
-        .shelf-seg-btn.active { background: var(--btn); color: var(--btn-tx); }
-        .shelf-seg-btn:not(.active):hover { background: var(--surf-h); color: var(--tx-2); }
+        .shelf-toggle { position: relative; display: flex; background: var(--surf-2); border: 1.5px solid var(--bd); border-radius: 999px; padding: 3px; margin-top: 20px; margin-bottom: 20px; }
+        .shelf-toggle-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); background: var(--btn); border-radius: 999px; transition: transform 0.22s cubic-bezier(0.4,0,0.2,1); pointer-events: none; }
+        .shelf-toggle[data-active="mix"] .shelf-toggle-thumb { transform: translateX(100%); }
+        .shelf-toggle-opt { flex: 1; text-align: center; padding: 8px 0; font-size: 0.82rem; font-weight: 600; color: var(--tx-3); position: relative; z-index: 1; cursor: pointer; transition: color 0.22s; user-select: none; border-radius: 999px; }
+        .shelf-toggle[data-active="suggest"] .shelf-toggle-opt[data-mode="suggest"],
+        .shelf-toggle[data-active="mix"] .shelf-toggle-opt[data-mode="mix"] { color: var(--btn-tx); }
         .shelf-mix-inputs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .shelf-mix-picker-wrap { position: relative; width: 42px; height: 42px; border-radius: 8px; overflow: hidden; border: 1px solid var(--bd-m); flex-shrink: 0; }
         .shelf-mix-colorpicker { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); border: none; padding: 0; cursor: pointer; }
@@ -333,7 +334,7 @@
     </aside>
     <div class="container">
         <h1>Palette Gen</h1>
-        <p class="subtitle">AI-powered color palettes for acrylic pour painters</p>
+        <p class="subtitle">AI-powered color palettes for acrylic pour painters · tube data based on Amsterdam Standard Series acrylics</p>
         <div class="section active" id="generateSection">
             <p class="section-title">Generate a palette</p>
             <p class="section-desc">Describe a mood or scene and get a full pour palette with mixing recipes.</p>
@@ -449,9 +450,10 @@
                 <button class="save-btn" onclick="document.getElementById('shelfImportInput').click()">Import shelf</button>
                 <input type="file" id="shelfImportInput" accept="application/json" style="display:none" onchange="importShelf(event)" />
             </div>
-            <div class="shelf-seg-control">
-                <button class="shelf-seg-btn active" onclick="setShelfTab('suggest',this)">Palette suggestions</button>
-                <button class="shelf-seg-btn" onclick="setShelfTab('mix',this)">Mix from shelf</button>
+            <div class="shelf-toggle" data-active="suggest">
+                <div class="shelf-toggle-thumb"></div>
+                <div class="shelf-toggle-opt" data-mode="suggest" onclick="setShelfTab('suggest')">Palette suggestions</div>
+                <div class="shelf-toggle-opt" data-mode="mix" onclick="setShelfTab('mix')">Mix from shelf</div>
             </div>
             <div id="shelfSuggestTab">
                 <div class="base-picker-row" id="basePickerRow">
@@ -769,9 +771,9 @@
         document.getElementById('mixPrimariesTab').style.display = mode === 'primaries' ? '' : 'none';
     }
 
-    function setShelfTab(mode, btn) {
-        document.querySelectorAll('.shelf-seg-btn').forEach(b => b.classList.remove('active'));
-        if (btn) btn.classList.add('active');
+    function setShelfTab(mode) {
+        const toggle = document.querySelector('.shelf-toggle');
+        if (toggle) toggle.dataset.active = mode;
         document.getElementById('shelfSuggestTab').style.display = mode === 'suggest' ? '' : 'none';
         document.getElementById('shelfMixTab').style.display = mode === 'mix' ? '' : 'none';
     }
@@ -788,8 +790,7 @@
         const shelfBtn = document.querySelector('.nav-btn[onclick*="shelfSection"]');
         showSection('shelfSection', shelfBtn);
         // Switch to Mix from shelf sub-tab
-        const mixTabBtn = document.querySelector('.shelf-seg-btn:last-child');
-        setShelfTab('mix', mixTabBtn);
+        setShelfTab('mix');
         // Set the tube picker state and UI
         shelfMixTube = { tube: targetTube, hex: targetHex };
         document.getElementById('shelfMixSwatch').style.background = targetHex;
