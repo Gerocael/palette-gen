@@ -346,6 +346,7 @@
         </div>
         <div class="divider"></div>
         <div class="section" id="mixSection">
+            <p class="section-title">Mix colours</p>
             <div class="mix-mode-tabs">
                 <button class="mix-tab-btn active" onclick="setMixTab('two',this)">Mix two tubes</button>
                 <button class="mix-tab-btn" onclick="setMixTab('primaries',this)">From primaries</button>
@@ -762,6 +763,8 @@
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        const showConfig = id === 'generateSection' || id === 'shelfSection';
+        document.querySelector('.config-panel').style.display = showConfig ? '' : 'none';
     }
 
     function setMixTab(mode, btn) {
