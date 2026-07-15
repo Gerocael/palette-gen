@@ -757,11 +757,11 @@
         opts.innerHTML = html;
     }
     function showSection(id, btn) {
+        window.scrollTo(0, 0);
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
     function setMixTab(mode, btn) {
