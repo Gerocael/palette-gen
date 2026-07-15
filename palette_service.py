@@ -578,21 +578,17 @@ def _km_compute(state: ShelfMixState) -> dict:
         max_components=state["max_components"],
         force_blend=True,
     )
-    # Scale fractions to grams targeting ~15g total
-    min_frac = min(fractions.values())
-    scale = max(1.0 / min_frac, 5.0)
-    total_raw = sum(v * scale for v in fractions.values())
-    if total_raw < 10:
-        scale *= 15 / total_raw
+    # Scale fractions to grams: aim for ~20g total so even 8% ingredients
+    # round to at least 2g (avoids single-tube collapse from rounding to 0)
+    TARGET_GRAMS = 20
     recipe = []
     for tube_name, frac in sorted(fractions.items(), key=lambda x: -x[1]):
-        grams = round(frac * scale)
-        if grams >= 1:
-            recipe.append({
-                "tube": tube_name,
-                "tubeHex": tube_hex_map[tube_name],
-                "grams": grams,
-            })
+        grams = max(1, round(frac * TARGET_GRAMS))
+        recipe.append({
+            "tube": tube_name,
+            "tubeHex": tube_hex_map[tube_name],
+            "grams": grams,
+        })
     return {"recipe": recipe, "fractions": fractions, "delta_e": de, "predicted_hex": predicted}
 
 

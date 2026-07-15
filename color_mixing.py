@@ -99,23 +99,27 @@ def find_best_mix(
     """
     Find optimal shelf-tube weights to minimise ΔE to target_hex.
 
-    Pool sizes per component count (avoids combinatorial explosion while
-    still catching cross-hue combinations like Yellow+Cyan→Green):
-        n=1: all tubes (trivial)
-        n=2: all tubes (2-component SLSQP is fast, cross-hue pairs matter)
-        n=3: top 20 closest
-        n=4: top 12 closest
-        n=5: top 8 closest
+    Pool sizes per component count (catches cross-hue combos like Yellow+Cyan→Green):
+        n=1 : all tubes
+        n=2 : all tubes  (fast SLSQP, cross-hue pairs matter)
+        n=3 : top 20
+        n=4 : top 12
+        n=5 : top 8
 
-    force_blend=True: when the best single-tube ΔE > 3, return the best
-    multi-tube blend even if its ΔE is slightly higher, because callers
-    asking for a recipe want an actionable mix, not a "closest tube" answer.
+    force_blend: when True each blend component is constrained to >= MIN_BLEND_FRAC
+    so the optimizer is forced to find meaningful proportions.  Any recipe with a
+    component < MIN_BLEND_FRAC would be impractical to measure anyway.  This also
+    guarantees that no component is dropped by the post-filter, so the returned
+    recipe is always 2+ tubes when a valid blend was found.
 
     Returns:
         recipe     – {tube_name: weight_fraction}, fractions sum to 1
         de         – achieved ΔE (CIE76)
         predicted  – hex code of the KM-predicted mixture
     """
+    MIN_BLEND_FRAC = 0.08   # each blend ingredient must be >= 8 %
+    DROP_THRESHOLD = 0.05   # single-tube path: drop < 5% (unused in blend path)
+
     tubes = list(tube_hex_map.keys())
     linears = np.array([hex_to_linear(h) for h in tube_hex_map.values()])
     target_lab = hex_to_lab(target_hex)
@@ -124,7 +128,6 @@ def find_best_mix(
     tube_de = [delta_e(target_lab, lab) for lab in tube_labs]
     ranked = sorted(range(len(tubes)), key=lambda i: tube_de[i])
 
-    # Pool sizes per n
     pool_limits = {1: len(tubes), 2: len(tubes), 3: 20, 4: 12, 5: 8}
 
     best_single_recipe: dict[str, float] = {tubes[ranked[0]]: 1.0}
@@ -148,6 +151,10 @@ def find_best_mix(
                     best_single_recipe = {tubes[combo[0]]: 1.0}
                 continue
 
+            # Lower bound per component: 0 for accuracy-first mode,
+            # MIN_BLEND_FRAC for force_blend so every ingredient is
+            # measurable and survives the drop filter below.
+            lb = MIN_BLEND_FRAC if force_blend else 0.0
             x0 = np.ones(n) / n
             try:
                 res = minimize(
@@ -155,11 +162,11 @@ def find_best_mix(
                     x0,
                     args=(combo_lin, target_lab),
                     method="SLSQP",
-                    bounds=[(0.0, 1.0)] * n,
+                    bounds=[(lb, 1.0)] * n,
                     constraints={"type": "eq", "fun": lambda w: w.sum() - 1},
                     options={"ftol": 1e-7, "maxiter": 200},
                 )
-                w = np.clip(res.x, 0, 1)
+                w = np.clip(res.x, lb, 1.0)
                 w /= w.sum()
                 mixed = km_predict(combo_lin, w)
                 de_val = delta_e(_linear_to_lab(mixed), target_lab)
@@ -170,7 +177,7 @@ def find_best_mix(
             except Exception:
                 pass
 
-    # Choose single vs blend
+    # Prefer blend when it wins on ΔE, or when caller needs a recipe
     use_blend = best_blend_recipe is not None and (
         best_blend_de < best_single_de
         or (force_blend and best_single_de > 3)
@@ -181,9 +188,9 @@ def find_best_mix(
     else:
         best_recipe, best_de, best_lin = best_single_recipe, best_single_de, best_single_lin
 
-    # Drop ingredients below 5% (too small to measure accurately)
+    # Drop negligible ingredients (only relevant for non-force_blend path)
     if len(best_recipe) > 1:
-        best_recipe = {k: v for k, v in best_recipe.items() if v >= 0.05}
+        best_recipe = {k: v for k, v in best_recipe.items() if v >= DROP_THRESHOLD}
         total = sum(best_recipe.values())
         best_recipe = {k: v / total for k, v in best_recipe.items()}
 
