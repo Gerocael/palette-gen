@@ -226,8 +226,8 @@
         .mix-result-hex { font-size: 0.8rem; color: var(--tx-3); margin-bottom: 12px; }
         .mix-result-desc { font-size: 0.85rem; color: var(--tx-2); line-height: 1.5; margin-bottom: 12px; }
         .mix-result-tip { font-size: 0.8rem; color: var(--tx-3); line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--bd); }
-        .shelf-search { margin-bottom: 16px; }
-        .shelf-search input { width: 100%; }
+        .shelf-search { margin-bottom: 16px; display: flex; gap: 8px; align-items: center; }
+        .shelf-search input { flex: 1; min-width: 0; }
         .shelf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
         .shelf-chip { width: 36px; height: 36px; border-radius: 7px; border: 1.5px solid rgba(0,0,0,0.18); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; position: relative; flex-shrink: 0; }
         .shelf-chip:hover { transform: scale(1.15); z-index: 10; }
@@ -434,6 +434,8 @@
             <p class="section-desc">Pick the Amsterdam tubes you own and get palette ideas you can actually make.</p>
             <div class="shelf-search">
                 <input type="text" id="shelfSearch" placeholder="Search colours..." oninput="filterShelf()" />
+                <button class="save-btn" onclick="selectAllTubes()">Select all</button>
+                <button class="save-btn" onclick="deselectAllTubes()">Deselect all</button>
             </div>
             <div class="shelf-chips" id="shelfChips"></div>
             <div class="shelf-selected-count" id="shelfCount">0 tubes selected</div>
@@ -442,21 +444,32 @@
                 <button class="save-btn" onclick="document.getElementById('shelfImportInput').click()">Import shelf</button>
                 <input type="file" id="shelfImportInput" accept="application/json" style="display:none" onchange="importShelf(event)" />
             </div>
-            <div class="base-picker-row" id="basePickerRow">
-                <span class="base-picker-label" id="basePickerLabel">Flood base</span>
-                <div id="baseOptions"></div>
+            <div class="mix-mode-tabs" style="margin-top:20px">
+                <button class="mix-tab-btn shelf-tab-btn active" onclick="setShelfTab('suggest',this)">Palette suggestions</button>
+                <button class="mix-tab-btn shelf-tab-btn" onclick="setShelfTab('mix',this)">Mix from shelf</button>
             </div>
-            <button id="suggestBtn" onclick="suggestPalettes()">Suggest palettes</button>
-            <div id="suggestResult" style="margin-top:24px;"></div>
-
-            <div class="shelf-mix-panel">
-                <p class="section-title" style="font-size:1rem;margin-bottom:4px">Mix a colour from your shelf</p>
-                <p class="section-desc" style="margin-bottom:14px">Pick a target colour and we'll find the best mix from the tubes you own using paint physics.</p>
+            <div id="shelfSuggestTab">
+                <div class="base-picker-row" id="basePickerRow">
+                    <span class="base-picker-label" id="basePickerLabel">Flood base</span>
+                    <div id="baseOptions"></div>
+                </div>
+                <button id="suggestBtn" onclick="suggestPalettes()">Suggest palettes</button>
+                <div id="suggestResult" style="margin-top:24px;"></div>
+            </div>
+            <div id="shelfMixTab" style="display:none">
+                <p class="section-desc" style="margin-bottom:14px">Pick a target Amsterdam tube and we'll find the best mix from the tubes you own using paint physics.</p>
                 <div class="shelf-mix-inputs">
-                    <div class="shelf-mix-picker-wrap">
-                        <input type="color" id="shelfMixColor" value="#3a6ea5" class="shelf-mix-colorpicker" />
+                    <div class="tube-picker" id="shelfMixPicker">
+                        <div class="tube-picker-trigger" onclick="toggleTubePicker('shelfMixPicker')">
+                            <div class="tube-picker-swatch" id="shelfMixSwatch"></div>
+                            <span class="tube-picker-name" id="shelfMixNameEl">Pick a target tube…</span>
+                            <span class="tube-picker-caret">▾</span>
+                        </div>
+                        <div class="tube-picker-dropdown" id="shelfMixDropdown">
+                            <input class="tube-picker-search" placeholder="Search Amsterdam tubes…" oninput="filterTubePicker(this,'shelfMixChips')" />
+                            <div class="tube-picker-chips" id="shelfMixChips"></div>
+                        </div>
                     </div>
-                    <input type="text" id="shelfMixName" placeholder="Colour name (optional, e.g. Phthalo Blue)" class="shelf-mix-name" />
                     <button id="shelfMixBtn" onclick="doShelfMix()">Find mix</button>
                 </div>
                 <div id="shelfMixResult" style="margin-top:16px;"></div>
@@ -745,39 +758,70 @@
     }
 
     function setMixTab(mode, btn) {
-        document.querySelectorAll('.mix-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#mixSection .mix-tab-btn').forEach(b => b.classList.remove('active'));
         if (btn) btn.classList.add('active');
         document.getElementById('mixTwoTab').style.display = mode === 'two' ? '' : 'none';
         document.getElementById('mixPrimariesTab').style.display = mode === 'primaries' ? '' : 'none';
     }
 
+    function setShelfTab(mode, btn) {
+        document.querySelectorAll('.shelf-tab-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        document.getElementById('shelfSuggestTab').style.display = mode === 'suggest' ? '' : 'none';
+        document.getElementById('shelfMixTab').style.display = mode === 'mix' ? '' : 'none';
+    }
+
     function mixForMe(hex, name) {
-        // Prefer the actual Amsterdam tube hex over the AI-generated palette hex
         const nl = name.toLowerCase().trim();
         const nb = nl.replace(/\s*\d+\s*$/, '').trim();
         const hit = allTubes.find(t => {
             const tl = t.tube.toLowerCase().trim();
             return tl === nl || tl.replace(/\s*\d+\s*$/, '').trim() === nb;
         });
+        const targetTube = hit ? hit.tube : name;
         const targetHex = hit ? hit.hex : hex;
         const shelfBtn = document.querySelector('.nav-btn[onclick*="shelfSection"]');
         showSection('shelfSection', shelfBtn);
-        document.getElementById('shelfMixColor').value = targetHex;
-        document.getElementById('shelfMixName').value = name;
+        // Switch to Mix from shelf sub-tab
+        const mixTabBtn = document.querySelector('.shelf-tab-btn:last-child');
+        setShelfTab('mix', mixTabBtn);
+        // Set the tube picker state and UI
+        shelfMixTube = { tube: targetTube, hex: targetHex };
+        document.getElementById('shelfMixSwatch').style.background = targetHex;
+        const nameEl = document.getElementById('shelfMixNameEl');
+        nameEl.textContent = stripCode(targetTube);
+        nameEl.classList.add('has-value');
         if (selectedTubes && selectedTubes.size > 0) {
             doShelfMix();
         } else {
             document.getElementById('shelfMixResult').innerHTML = '<div class="error">Add some tubes to your shelf first, then we can find a mix for this colour.</div>';
         }
         setTimeout(() => {
-            const panel = document.querySelector('.shelf-mix-panel');
-            if (panel) panel.scrollIntoView({behavior: 'smooth'});
+            const tab = document.getElementById('shelfMixTab');
+            if (tab) tab.scrollIntoView({behavior: 'smooth'});
         }, 100);
     }
 
     let mixTube1 = null, mixTube2 = null;
     let compTube1 = null, compTube2 = null;
     let primariesTube = null, lastPrimariesMix = null, primariesMultiplier = 1;
+    let shelfMixTube = null;
+
+    function selectAllTubes() {
+        const search = (document.getElementById('shelfSearch').value || '').toLowerCase();
+        allTubes.forEach(t => {
+            if (!search || t.tube.toLowerCase().includes(search)) selectedTubes.add(t.tube);
+        });
+        renderShelfChips();
+        calculatePaintNeeded();
+    }
+
+    function deselectAllTubes() {
+        selectedTubes.clear();
+        floodBases = [];
+        renderShelfChips();
+        calculatePaintNeeded();
+    }
 
     function toggleTubePicker(pickerId) {
         const picker = document.getElementById(pickerId);
@@ -817,11 +861,12 @@
 
     function selectTubeForPicker(chipsId, tubeName, hex) {
         const map = {
-            mixChips1:  { setVar: v => mixTube1  = v, swatch: 'mixSwatch1',  name: 'mixName1',  picker: 'mixPicker1' },
-            mixChips2:  { setVar: v => mixTube2  = v, swatch: 'mixSwatch2',  name: 'mixName2',  picker: 'mixPicker2' },
-            compChips1: { setVar: v => compTube1 = v, swatch: 'compSwatch1', name: 'compName1', picker: 'compPicker1' },
-            compChips2: { setVar: v => compTube2 = v, swatch: 'compSwatch2', name: 'compName2', picker: 'compPicker2' },
+            mixChips1:    { setVar: v => mixTube1     = v, swatch: 'mixSwatch1',    name: 'mixName1',      picker: 'mixPicker1' },
+            mixChips2:    { setVar: v => mixTube2     = v, swatch: 'mixSwatch2',    name: 'mixName2',      picker: 'mixPicker2' },
+            compChips1:   { setVar: v => compTube1    = v, swatch: 'compSwatch1',   name: 'compName1',     picker: 'compPicker1' },
+            compChips2:   { setVar: v => compTube2    = v, swatch: 'compSwatch2',   name: 'compName2',     picker: 'compPicker2' },
             primariesChips: { setVar: v => primariesTube = v, swatch: 'primariesSwatch', name: 'primariesName', picker: 'primariesPicker' },
+            shelfMixChips:  { setVar: v => shelfMixTube  = v, swatch: 'shelfMixSwatch',  name: 'shelfMixNameEl', picker: 'shelfMixPicker' },
         };
         const entry = map[chipsId];
         if (!entry) return;
@@ -1288,21 +1333,12 @@
             document.getElementById('shelfMixResult').innerHTML = '<div class="error">Select at least one tube from your shelf first.</div>';
             return;
         }
-        const targetName = document.getElementById('shelfMixName').value.trim();
-        // If the name matches a known Amsterdam tube, use its actual hex for accuracy
-        let targetHex = document.getElementById('shelfMixColor').value;
-        if (targetName) {
-            const nl = targetName.toLowerCase().trim();
-            const nb = nl.replace(/\s*\d+\s*$/, '').trim();
-            const hit = allTubes.find(t => {
-                const tl = t.tube.toLowerCase().trim();
-                return tl === nl || tl.replace(/\s*\d+\s*$/, '').trim() === nb;
-            });
-            if (hit) {
-                targetHex = hit.hex;
-                document.getElementById('shelfMixColor').value = targetHex;
-            }
+        if (!shelfMixTube) {
+            document.getElementById('shelfMixResult').innerHTML = '<div class="error">Pick a target tube using the picker above.</div>';
+            return;
         }
+        const targetName = shelfMixTube.tube;
+        const targetHex = shelfMixTube.hex;
         const btn = document.getElementById('shelfMixBtn');
         const result = document.getElementById('shelfMixResult');
         btn.disabled = true; btn.textContent = 'Mixing...';
