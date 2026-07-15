@@ -94,41 +94,58 @@ def find_best_mix(
     target_hex: str,
     tube_hex_map: dict[str, str],
     max_components: int = 3,
+    force_blend: bool = False,
 ) -> tuple[dict[str, float], float, str]:
     """
     Find optimal shelf-tube weights to minimise ΔE to target_hex.
 
+    Pool sizes per component count (avoids combinatorial explosion while
+    still catching cross-hue combinations like Yellow+Cyan→Green):
+        n=1: all tubes (trivial)
+        n=2: all tubes (2-component SLSQP is fast, cross-hue pairs matter)
+        n=3: top 20 closest
+        n=4: top 12 closest
+        n=5: top 8 closest
+
+    force_blend=True: when the best single-tube ΔE > 3, return the best
+    multi-tube blend even if its ΔE is slightly higher, because callers
+    asking for a recipe want an actionable mix, not a "closest tube" answer.
+
     Returns:
         recipe     – {tube_name: weight_fraction}, fractions sum to 1
-        de         – achieved ΔE (CIE76) — lower is better; <5 visually close
+        de         – achieved ΔE (CIE76)
         predicted  – hex code of the KM-predicted mixture
     """
     tubes = list(tube_hex_map.keys())
     linears = np.array([hex_to_linear(h) for h in tube_hex_map.values()])
     target_lab = hex_to_lab(target_hex)
 
-    # Per-tube distance — rank candidates
     tube_labs = [_linear_to_lab(lin) for lin in linears]
     tube_de = [delta_e(target_lab, lab) for lab in tube_labs]
     ranked = sorted(range(len(tubes)), key=lambda i: tube_de[i])
 
-    # Cap candidate pool to 8 closest tubes (keeps combination count reasonable)
-    pool = ranked[:min(8, len(tubes))]
+    # Pool sizes per n
+    pool_limits = {1: len(tubes), 2: len(tubes), 3: 20, 4: 12, 5: 8}
 
-    best_recipe: dict[str, float] = {tubes[ranked[0]]: 1.0}
-    best_de = tube_de[ranked[0]]
-    best_lin = linears[ranked[0]]
+    best_single_recipe: dict[str, float] = {tubes[ranked[0]]: 1.0}
+    best_single_de = tube_de[ranked[0]]
+    best_single_lin = linears[ranked[0]]
+
+    best_blend_recipe: dict[str, float] | None = None
+    best_blend_de = float("inf")
+    best_blend_lin: np.ndarray | None = None
 
     for n in range(1, max_components + 1):
+        pool = ranked[:min(pool_limits.get(n, 8), len(tubes))]
         for combo in combinations(pool, n):
             combo_lin = linears[list(combo)]
 
             if n == 1:
                 de_val = tube_de[combo[0]]
-                if de_val < best_de:
-                    best_de = de_val
-                    best_lin = combo_lin[0]
-                    best_recipe = {tubes[combo[0]]: 1.0}
+                if de_val < best_single_de:
+                    best_single_de = de_val
+                    best_single_lin = combo_lin[0]
+                    best_single_recipe = {tubes[combo[0]]: 1.0}
                 continue
 
             x0 = np.ones(n) / n
@@ -146,12 +163,23 @@ def find_best_mix(
                 w /= w.sum()
                 mixed = km_predict(combo_lin, w)
                 de_val = delta_e(_linear_to_lab(mixed), target_lab)
-                if de_val < best_de:
-                    best_de = de_val
-                    best_lin = mixed
-                    best_recipe = {tubes[combo[i]]: float(w[j]) for j, i in enumerate(combo)}
+                if de_val < best_blend_de:
+                    best_blend_de = de_val
+                    best_blend_lin = mixed
+                    best_blend_recipe = {tubes[combo[i]]: float(w[j]) for j, i in enumerate(combo)}
             except Exception:
                 pass
+
+    # Choose single vs blend
+    use_blend = best_blend_recipe is not None and (
+        best_blend_de < best_single_de
+        or (force_blend and best_single_de > 3)
+    )
+
+    if use_blend:
+        best_recipe, best_de, best_lin = best_blend_recipe, best_blend_de, best_blend_lin
+    else:
+        best_recipe, best_de, best_lin = best_single_recipe, best_single_de, best_single_lin
 
     # Drop ingredients below 5% (too small to measure accurately)
     if len(best_recipe) > 1:

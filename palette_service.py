@@ -574,7 +574,9 @@ def _km_compute(state: ShelfMixState) -> dict:
         if t.get("tube") and t.get("hex")
     }
     fractions, de, predicted = find_best_mix(
-        state["target_hex"], tube_hex_map, max_components=state["max_components"]
+        state["target_hex"], tube_hex_map,
+        max_components=state["max_components"],
+        force_blend=True,
     )
     # Scale fractions to grams targeting ~15g total
     min_frac = min(fractions.values())
