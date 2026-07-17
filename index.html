@@ -979,27 +979,30 @@
         if (!lastPalette) return;
         const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
         const colors = lastPalette.colors, n = colors.length;
-        const width=1200, swatchH=280, headerH=80, footerH=60;
-        canvas.width=width; canvas.height=headerH+swatchH+footerH;
-        ctx.fillStyle='#f5f2ee'; ctx.fillRect(0,0,width,canvas.height);
-        ctx.fillStyle='#1e1a17'; ctx.font='bold 28px sans-serif'; ctx.fillText('Palette Gen',32,48);
-        ctx.fillStyle='#8a8480'; ctx.font='14px sans-serif'; ctx.fillText(`"${lastPalette.prompt||lastPalette.name||''}"`,32,70);
-        const sw=width/n;
-        colors.forEach((color,i) => {
-            const x=i*sw, y=headerH;
-            ctx.fillStyle=color.hex_code; ctx.fillRect(x,y,sw,swatchH);
-            const tc=getTextColor(color.hex_code);
-            const ty=y+swatchH-20;
-            ctx.fillStyle=tc; ctx.globalAlpha=0.85; ctx.font='500 13px sans-serif'; ctx.fillText(getHexDisplay(color),x+14,ty-22);
-            ctx.globalAlpha=1; ctx.font='bold 14px sans-serif';
-            const displayName = color.name || getColorDisplayName(color);
-            if (displayName.length > 18) { ctx.font='bold 11px sans-serif'; }
-            ctx.fillText(displayName,x+14,ty); ctx.globalAlpha=1;
+        const W = 1200, H = 420, pad = 36, gap = 10, r = 18;
+        canvas.width = W; canvas.height = H;
+        ctx.fillStyle = '#f5f2ee';
+        ctx.fillRect(0, 0, W, H);
+        const swH = H - pad * 2 - 32;
+        const swW = (W - pad * 2 - gap * (n - 1)) / n;
+        colors.forEach((color, i) => {
+            const x = pad + i * (swW + gap);
+            roundedRectPath(ctx, x, pad, swW, swH, r);
+            ctx.fillStyle = color.hex_code;
+            ctx.fill();
+            roundedRectPath(ctx, x, pad, swW, swH, r);
+            ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
         });
-        ctx.fillStyle='#8a8480'; ctx.font='12px sans-serif'; ctx.fillText('palette-gen-heti.onrender.com',32,canvas.height-20);
-        const link=document.createElement('a');
-        link.download=`palette-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
-        link.href=canvas.toDataURL('image/png'); link.click();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#b8b3ad';
+        ctx.font = '13px sans-serif';
+        ctx.fillText('Palette Gen · palette-gen-heti.onrender.com', W / 2, H - 10);
+        const link = document.createElement('a');
+        link.download = `palette-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     }
 
     function roundedRectPath(ctx, x, y, w, h, r) {
@@ -1021,41 +1024,30 @@
         const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
         const W = 1080, H = 1920;
         canvas.width = W; canvas.height = H;
-        ctx.fillStyle = '#f5f2ee'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#f5f2ee';
+        ctx.fillRect(0, 0, W, H);
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#1e1a17'; ctx.font = 'bold 52px sans-serif';
-        ctx.fillText('Palette Gen', W/2, 130);
-        const subtitle = lastPalette.prompt || lastPalette.name || '';
-        if (subtitle) {
-            ctx.fillStyle = '#8a8480'; ctx.font = '30px sans-serif';
-            ctx.fillText(`"${subtitle}"`, W/2, 178);
-        }
-
-        const colors = lastPalette.colors;
-        const n = colors.length;
-        const marginX = 64, gap = 24, top = 240, bottom = 140, radius = 28;
+        const colors = lastPalette.colors, n = colors.length;
+        const marginX = 60, gap = 16, pad = 80, radius = 32;
         const cardW = W - marginX * 2;
-        const cardH = (H - top - bottom - gap * (n - 1)) / n;
+        const usableH = H - pad * 2 - 60;
+        const cardH = (usableH - gap * (n - 1)) / n;
 
         colors.forEach((color, i) => {
-            const y = top + i * (cardH + gap);
-            const tc = getTextColor(color.hex_code);
+            const y = pad + i * (cardH + gap);
             roundedRectPath(ctx, marginX, y, cardW, cardH, radius);
             ctx.fillStyle = color.hex_code;
             ctx.fill();
-
-            ctx.textAlign = 'left';
-            const displayName = color.name || getColorDisplayName(color);
-            ctx.fillStyle = tc; ctx.font = displayName.length > 20 ? 'bold 30px sans-serif' : 'bold 38px sans-serif';
-            ctx.fillText(displayName, marginX + 32, y + cardH - 46);
-            ctx.globalAlpha = 0.85; ctx.font = '500 26px sans-serif';
-            ctx.fillText(getHexDisplay(color), marginX + 32, y + cardH - 14);
-            ctx.globalAlpha = 1;
+            roundedRectPath(ctx, marginX, y, cardW, cardH, radius);
+            ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         });
 
-        ctx.textAlign = 'center'; ctx.fillStyle = '#8a8480'; ctx.font = '26px sans-serif';
-        ctx.fillText('palette-gen-heti.onrender.com', W/2, H - 60);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#b8b3ad';
+        ctx.font = '28px sans-serif';
+        ctx.fillText('Palette Gen · palette-gen-heti.onrender.com', W / 2, H - 30);
 
         const link = document.createElement('a');
         link.download = `palette-story-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
