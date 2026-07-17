@@ -105,17 +105,25 @@ def generate(state: PaletteState) -> dict:
         if base_colors:
             num_bases = len(base_colors)
             num_accents = max(1, nc - num_bases)
+            actual_total = num_bases + num_accents
             base_desc = "\n".join(
                 f"- {b.get('name', 'Color')} ({b.get('hex', '#888888')})"
                 for b in base_colors
             )
             result = palette_flood_chain.invoke({
                 "prompt": state["prompt"],
-                "num_colors": num_bases + num_accents,
+                "num_colors": actual_total,
                 "num_bases": num_bases,
                 "num_accents": num_accents,
                 "base_color_desc": base_desc,
             })
+            # Pin exact hex codes and names for base colors regardless of LLM output
+            raw = result if isinstance(result, list) else (result.get("colors") if isinstance(result, dict) else [])
+            for i, base in enumerate(base_colors):
+                if i < len(raw) and isinstance(raw[i], dict):
+                    raw[i]["hexCode"] = base["hex"]
+                    raw[i]["colorName"] = base["name"]
+            return {"colors": result, "num_colors": actual_total, "attempts": state["attempts"] + 1}
         elif state["attempts"] == 0:
             result = palette_chain.invoke({"prompt": state["prompt"], "num_colors": nc})
         else:

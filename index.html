@@ -1270,12 +1270,34 @@
         finally { btn.disabled = false; btn.textContent = 'Generate'; }
     }
 
+    function detectTubesInPrompt(prompt) {
+        const segments = prompt.split(/,|\band\b|\bwith\b|\+|;/gi).map(s => s.trim()).filter(Boolean);
+        const results = [];
+        const seen = new Set();
+        const stripNum = s => s.replace(/\s+\w*\d+\w*\s*$/, '').trim();
+        for (const seg of segments) {
+            const sl = seg.toLowerCase().trim();
+            const slStripped = stripNum(sl);
+            const hit = allTubes.find(t => {
+                const tl = t.tube.toLowerCase().trim();
+                const tlStripped = stripNum(tl);
+                return tl === sl || tlStripped === sl || tl === slStripped || tlStripped === slStripped;
+            });
+            if (hit && !seen.has(hit.tube)) {
+                seen.add(hit.tube);
+                results.push({name: hit.tube, hex: hit.hex});
+            }
+        }
+        return results;
+    }
+
     async function generatePalette() {
         const prompt = document.getElementById('promptInput').value.trim();
         if (!prompt) { document.getElementById('paletteResult').innerHTML = '<div class="error">Please enter a mood, theme, or scene first.</div>'; return; }
         genBases = []; lockedColors = []; isFirstGen = true;
         unlockColorCount();
-        await doGenerate(prompt, []);
+        const promptTubes = detectTubesInPrompt(prompt);
+        await doGenerate(prompt, promptTubes);
     }
 
     async function regenerateGen() {
