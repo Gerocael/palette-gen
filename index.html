@@ -979,11 +979,11 @@
         if (!lastPalette) return;
         const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
         const colors = lastPalette.colors, n = colors.length;
-        const W = 1200, H = 420, pad = 36, gap = 10, r = 18;
+        const W = 1200, H = 400, pad = 36, gap = 10, r = 18;
         canvas.width = W; canvas.height = H;
         ctx.fillStyle = '#f5f2ee';
         ctx.fillRect(0, 0, W, H);
-        const swH = H - pad * 2 - 32;
+        const swH = H - pad * 2;
         const swW = (W - pad * 2 - gap * (n - 1)) / n;
         colors.forEach((color, i) => {
             const x = pad + i * (swW + gap);
@@ -995,10 +995,6 @@
             ctx.lineWidth = 1.5;
             ctx.stroke();
         });
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#b8b3ad';
-        ctx.font = '13px sans-serif';
-        ctx.fillText('Palette Gen · palette-gen-heti.onrender.com', W / 2, H - 10);
         const link = document.createElement('a');
         link.download = `palette-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
         link.href = canvas.toDataURL('image/png');
@@ -1030,8 +1026,7 @@
         const colors = lastPalette.colors, n = colors.length;
         const marginX = 60, gap = 16, pad = 80, radius = 32;
         const cardW = W - marginX * 2;
-        const usableH = H - pad * 2 - 60;
-        const cardH = (usableH - gap * (n - 1)) / n;
+        const cardH = (H - pad * 2 - gap * (n - 1)) / n;
 
         colors.forEach((color, i) => {
             const y = pad + i * (cardH + gap);
@@ -1044,10 +1039,6 @@
             ctx.stroke();
         });
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#b8b3ad';
-        ctx.font = '28px sans-serif';
-        ctx.fillText('Palette Gen · palette-gen-heti.onrender.com', W / 2, H - 30);
 
         const link = document.createElement('a');
         link.download = `palette-story-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
