@@ -978,13 +978,14 @@
     function savePaletteAsPng() {
         if (!lastPalette) return;
         const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+        const colors = lastPalette.colors, n = colors.length;
         const width=1200, swatchH=280, headerH=80, footerH=60;
         canvas.width=width; canvas.height=headerH+swatchH+footerH;
-        ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,width,canvas.height);
-        ctx.fillStyle='#f5f0eb'; ctx.font='bold 28px sans-serif'; ctx.fillText('Palette Gen',32,48);
-        ctx.fillStyle='#7a756f'; ctx.font='14px sans-serif'; ctx.fillText(`"${lastPalette.prompt||lastPalette.name||''}"`,32,70);
-        const sw=width/5;
-        lastPalette.colors.forEach((color,i) => {
+        ctx.fillStyle='#f5f2ee'; ctx.fillRect(0,0,width,canvas.height);
+        ctx.fillStyle='#1e1a17'; ctx.font='bold 28px sans-serif'; ctx.fillText('Palette Gen',32,48);
+        ctx.fillStyle='#8a8480'; ctx.font='14px sans-serif'; ctx.fillText(`"${lastPalette.prompt||lastPalette.name||''}"`,32,70);
+        const sw=width/n;
+        colors.forEach((color,i) => {
             const x=i*sw, y=headerH;
             ctx.fillStyle=color.hex_code; ctx.fillRect(x,y,sw,swatchH);
             const tc=getTextColor(color.hex_code);
@@ -995,7 +996,7 @@
             if (displayName.length > 18) { ctx.font='bold 11px sans-serif'; }
             ctx.fillText(displayName,x+14,ty); ctx.globalAlpha=1;
         });
-        ctx.fillStyle='#7a756f'; ctx.font='12px sans-serif'; ctx.fillText('palette-gen-heti.onrender.com',32,canvas.height-20);
+        ctx.fillStyle='#8a8480'; ctx.font='12px sans-serif'; ctx.fillText('palette-gen-heti.onrender.com',32,canvas.height-20);
         const link=document.createElement('a');
         link.download=`palette-${(lastPalette.prompt||lastPalette.name||'palette').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40)}.png`;
         link.href=canvas.toDataURL('image/png'); link.click();
@@ -1020,14 +1021,14 @@
         const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
         const W = 1080, H = 1920;
         canvas.width = W; canvas.height = H;
-        ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#f5f2ee'; ctx.fillRect(0, 0, W, H);
 
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#f5f0eb'; ctx.font = 'bold 52px sans-serif';
+        ctx.fillStyle = '#1e1a17'; ctx.font = 'bold 52px sans-serif';
         ctx.fillText('Palette Gen', W/2, 130);
         const subtitle = lastPalette.prompt || lastPalette.name || '';
         if (subtitle) {
-            ctx.fillStyle = '#7a756f'; ctx.font = '30px sans-serif';
+            ctx.fillStyle = '#8a8480'; ctx.font = '30px sans-serif';
             ctx.fillText(`"${subtitle}"`, W/2, 178);
         }
 
@@ -1053,7 +1054,7 @@
             ctx.globalAlpha = 1;
         });
 
-        ctx.textAlign = 'center'; ctx.fillStyle = '#7a756f'; ctx.font = '26px sans-serif';
+        ctx.textAlign = 'center'; ctx.fillStyle = '#8a8480'; ctx.font = '26px sans-serif';
         ctx.fillText('palette-gen-heti.onrender.com', W/2, H - 60);
 
         const link = document.createElement('a');
