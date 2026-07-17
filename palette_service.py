@@ -103,26 +103,44 @@ def generate(state: PaletteState) -> dict:
     base_colors = state.get("base_colors") or []
     try:
         if base_colors:
-            num_bases = len(base_colors)
-            num_accents = max(1, nc - num_bases)
-            actual_total = num_bases + num_accents
+            num_bases = min(len(base_colors), nc)
+            base_colors = base_colors[:num_bases]
+            num_accents = nc - num_bases
+            actual_total = nc
             base_desc = "\n".join(
                 f"- {b.get('name', 'Color')} ({b.get('hex', '#888888')})"
                 for b in base_colors
             )
-            result = palette_flood_chain.invoke({
-                "prompt": state["prompt"],
-                "num_colors": actual_total,
-                "num_bases": num_bases,
-                "num_accents": num_accents,
-                "base_color_desc": base_desc,
-            })
-            # Pin exact hex codes and names for base colors regardless of LLM output
-            raw = result if isinstance(result, list) else (result.get("colors") if isinstance(result, dict) else [])
-            for i, base in enumerate(base_colors):
-                if i < len(raw) and isinstance(raw[i], dict):
-                    raw[i]["hexCode"] = base["hex"]
-                    raw[i]["colorName"] = base["name"]
+            if num_accents == 0:
+                # All slots filled by base colors — skip LLM, build palette directly
+                ratio = 100 // num_bases
+                remainder = 100 - ratio * num_bases
+                colors = [
+                    {
+                        "hexCode": b["hex"],
+                        "colorName": b["name"],
+                        "emotionalDescription": "Amsterdam Standard Series tube",
+                        "pourRatio": ratio + (remainder if i == 0 else 0),
+                        "role": "base",
+                        "mixRecipe": [{"tube": b["name"], "tubeHex": b["hex"], "grams": 20}],
+                    }
+                    for i, b in enumerate(base_colors)
+                ]
+                result = {"colors": colors, "technique": {"name": "Dirty Pour", "reason": "Your chosen tubes blended together.", "tip": "Pour your lightest colour last for the best cell formation."}}
+            else:
+                result = palette_flood_chain.invoke({
+                    "prompt": state["prompt"],
+                    "num_colors": actual_total,
+                    "num_bases": num_bases,
+                    "num_accents": num_accents,
+                    "base_color_desc": base_desc,
+                })
+                # Pin exact hex codes and names for base colors regardless of LLM output
+                raw = result if isinstance(result, list) else (result.get("colors") if isinstance(result, dict) else [])
+                for i, base in enumerate(base_colors):
+                    if i < len(raw) and isinstance(raw[i], dict):
+                        raw[i]["hexCode"] = base["hex"]
+                        raw[i]["colorName"] = base["name"]
             return {"colors": result, "num_colors": actual_total, "attempts": state["attempts"] + 1}
         elif state["attempts"] == 0:
             result = palette_chain.invoke({"prompt": state["prompt"], "num_colors": nc})
