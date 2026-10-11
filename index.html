@@ -738,7 +738,7 @@
         }).join('');
 
         document.getElementById('photoDownloadRow').innerHTML =
-            `<button class="save-btn" style="margin-top:4px" onclick="savePhotoPaletteAsPng()">&#8681; Download palette</button>`;
+            `<div style="text-align:center;margin-top:8px"><button class="export-trigger" onclick="savePhotoPaletteAsPng()">&#8681; Download</button></div>`;
 
         lastPalette = {
             colors: photoMatches.map(m => ({hex_code: m.tube.hex, name: m.tube.tube})),
