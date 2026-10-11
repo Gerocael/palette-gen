@@ -285,12 +285,12 @@
         .photo-drop-text { color: var(--tx-2); font-size: 0.95rem; margin-bottom: 4px; }
         .photo-drop-sub { color: var(--tx-3); font-size: 0.8rem; }
         .photo-preview-img { display: block; margin: 0 auto 20px; max-width: 100%; width: 380px; height: auto; max-height: 280px; object-fit: cover; border-radius: 12px; border: 1px solid var(--bd); }
-        .photo-extracted-row { display: flex; gap: 6px; margin-bottom: 12px; }
-        .photo-extracted-swatch { flex: 1; height: 28px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); }
         .photo-palette-row { display: flex; gap: 8px; margin-bottom: 20px; }
-        .photo-tube-card { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-        .photo-tube-swatch { width: 100%; height: 100px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
-        .photo-tube-name { font-size: 0.72rem; color: var(--tx-3); text-align: center; line-height: 1.3; }
+        .photo-tube-card { flex: 1; display: flex; flex-direction: column; gap: 0; align-items: stretch; }
+        .photo-extracted-mini { height: 22px; border-radius: 5px; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0; }
+        .photo-card-arrow { text-align: center; color: var(--tx-p); font-size: 0.65rem; line-height: 2; flex-shrink: 0; }
+        .photo-tube-swatch { width: 100%; flex: 1; min-height: 90px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
+        .photo-tube-name { font-size: 0.72rem; color: var(--tx-3); text-align: center; line-height: 1.3; margin-top: 6px; }
         .footer { text-align: center; color: var(--tx-3); font-size: 0.75rem; margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--bd-s); }
         @media (max-width: 768px) {
             .page-wrapper { flex-direction: column; padding: 0 16px; }
@@ -512,9 +512,8 @@
             <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoFile(event)" />
             <div id="photoResult" style="display:none">
                 <img id="photoPreviewImg" class="photo-preview-img" alt="Preview" />
-                <div class="photo-extracted-row" id="photoExtractedRow"></div>
                 <div class="photo-palette-row" id="photoPaletteRow"></div>
-                <div class="palette-action-row" id="photoDownloadRow"></div>
+                <div id="photoDownloadRow"></div>
             </div>
         </div>
         <div class="footer">Built by Roland Gebe</div>
@@ -727,35 +726,61 @@
             if (photoMatches.length >= n) break;
         }
 
-        // Extracted colours from photo
-        document.getElementById('photoExtractedRow').innerHTML = photoMatches.map(m => {
-            const hex = '#' + m.rgb.map(v => v.toString(16).padStart(2,'0')).join('');
-            return `<div class="photo-extracted-swatch" style="background:${hex}" title="${hex}"></div>`;
-        }).join('');
-
-        // Matched Amsterdam tubes with names
-        document.getElementById('photoPaletteRow').innerHTML = photoMatches.map(m =>
-            `<div class="photo-tube-card">
+        // Combined cards: extracted colour → arrow → matched tube → name
+        document.getElementById('photoPaletteRow').innerHTML = photoMatches.map(m => {
+            const extractedHex = '#' + m.rgb.map(v => v.toString(16).padStart(2,'0')).join('');
+            return `<div class="photo-tube-card">
+                <div class="photo-extracted-mini" style="background:${extractedHex}" title="${extractedHex}"></div>
+                <div class="photo-card-arrow">↓</div>
                 <div class="photo-tube-swatch" style="background:${m.tube.hex}"></div>
                 <div class="photo-tube-name">${stripCode(m.tube.tube)}</div>
-            </div>`
-        ).join('');
-
-        // Download button
-        document.getElementById('photoDownloadRow').innerHTML = `
-            <div class="export-dropdown">
-                <button class="export-trigger">&#8681; Download</button>
-                <div class="export-menu"><div class="export-menu-inner">
-                    <button onclick="savePaletteAsPng()"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square colour swatches</span></span></button>
-                    <button onclick="savePaletteAsStoryPng()"><span>&#128247;</span><span><span class="menu-label">Story (9:16)</span><br><span class="menu-desc">Vertical for Instagram</span></span></button>
-                </div></div>
             </div>`;
+        }).join('');
+
+        document.getElementById('photoDownloadRow').innerHTML =
+            `<button class="save-btn" style="margin-top:4px" onclick="savePhotoPaletteAsPng()">&#8681; Download palette</button>`;
 
         lastPalette = {
             colors: photoMatches.map(m => ({hex_code: m.tube.hex, name: m.tube.tube})),
             prompt: 'photo'
         };
         document.getElementById('photoResult').style.display = '';
+    }
+
+    function savePhotoPaletteAsPng() {
+        if (!photoMatches.length) return;
+        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+        const n = photoMatches.length;
+        const W = 1200, pad = 44, gap = 10, r = 16;
+        const swH = 260, nameSize = 19, codeSize = 14;
+        const H = pad + swH + 18 + nameSize + 8 + codeSize + pad;
+        canvas.width = W; canvas.height = H;
+        ctx.fillStyle = '#f5f2ee';
+        ctx.fillRect(0, 0, W, H);
+        const swW = (W - pad * 2 - gap * (n - 1)) / n;
+        photoMatches.forEach((m, i) => {
+            const x = pad + i * (swW + gap);
+            roundedRectPath(ctx, x, pad, swW, swH, r);
+            ctx.fillStyle = m.tube.hex;
+            ctx.fill();
+            roundedRectPath(ctx, x, pad, swW, swH, r);
+            ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            const cx = x + swW / 2;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#1e1a17';
+            ctx.font = `500 ${nameSize}px 'DM Sans', sans-serif`;
+            ctx.fillText(stripCode(m.tube.tube), cx, pad + swH + 18 + nameSize);
+            const code = m.tube.tube.match(/\d{3}[a-zA-Z]?$/)?.[0] || '';
+            ctx.fillStyle = '#8a8480';
+            ctx.font = `${codeSize}px 'DM Sans', sans-serif`;
+            ctx.fillText((code ? `Amsterdam ${code}  ·  ` : '') + m.tube.hex.toUpperCase(), cx, pad + swH + 18 + nameSize + 8 + codeSize);
+        });
+        const link = document.createElement('a');
+        link.download = 'palette-from-photo.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     }
     // --- End photo section ---
 
