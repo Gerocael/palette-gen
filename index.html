@@ -284,13 +284,13 @@
         .photo-drop-icon { font-size: 2rem; margin-bottom: 12px; line-height: 1; }
         .photo-drop-text { color: var(--tx-2); font-size: 0.95rem; margin-bottom: 4px; }
         .photo-drop-sub { color: var(--tx-3); font-size: 0.8rem; }
-        .photo-result-row { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 24px; }
-        .photo-preview-img { width: 180px; height: 140px; object-fit: cover; border-radius: 10px; flex-shrink: 0; border: 1px solid var(--bd); }
-        .photo-matches { flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-        .photo-match-row { display: flex; align-items: center; gap: 10px; }
-        .photo-match-swatch { width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1); }
-        .photo-match-arrow { color: var(--tx-3); font-size: 0.75rem; flex-shrink: 0; }
-        .photo-match-name { font-size: 0.82rem; color: var(--tx-2); }
+        .photo-preview-img { display: block; margin: 0 auto 20px; max-width: 100%; width: 380px; height: auto; max-height: 280px; object-fit: cover; border-radius: 12px; border: 1px solid var(--bd); }
+        .photo-extracted-row { display: flex; gap: 6px; margin-bottom: 12px; }
+        .photo-extracted-swatch { flex: 1; height: 28px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); }
+        .photo-palette-row { display: flex; gap: 8px; margin-bottom: 20px; }
+        .photo-tube-card { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .photo-tube-swatch { width: 100%; height: 100px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
+        .photo-tube-name { font-size: 0.72rem; color: var(--tx-3); text-align: center; line-height: 1.3; }
         .footer { text-align: center; color: var(--tx-3); font-size: 0.75rem; margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--bd-s); }
         @media (max-width: 768px) {
             .page-wrapper { flex-direction: column; padding: 0 16px; }
@@ -511,12 +511,10 @@
             </div>
             <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="handlePhotoFile(event)" />
             <div id="photoResult" style="display:none">
-                <div class="photo-result-row">
-                    <img id="photoPreviewImg" class="photo-preview-img" alt="Preview" />
-                    <div class="photo-matches" id="photoMatches"></div>
-                </div>
-                <button id="photoGenerateBtn" onclick="doPhotoGenerate()">Generate palette</button>
-                <div id="photoGenerateResult" style="margin-top:24px;"></div>
+                <img id="photoPreviewImg" class="photo-preview-img" alt="Preview" />
+                <div class="photo-extracted-row" id="photoExtractedRow"></div>
+                <div class="photo-palette-row" id="photoPaletteRow"></div>
+                <div class="palette-action-row" id="photoDownloadRow"></div>
             </div>
         </div>
         <div class="footer">Built by Roland Gebe</div>
@@ -712,7 +710,7 @@
     }
     function processPhoto(img) {
         const n = cfgNumColors;
-        const palette = colorThief.getPalette(img, Math.min(n + 3, 10));
+        const palette = colorThief.getPalette(img, Math.min(n + 4, 12));
         const seen = new Set();
         photoMatches = [];
         for (const rgb of palette) {
@@ -728,59 +726,36 @@
             }
             if (photoMatches.length >= n) break;
         }
-        const matchEl = document.getElementById('photoMatches');
-        matchEl.innerHTML = photoMatches.map(m => {
-            const extracted = '#' + m.rgb.map(v => v.toString(16).padStart(2,'0')).join('');
-            return `<div class="photo-match-row">
-                <div class="photo-match-swatch" style="background:${extracted}" title="${extracted}"></div>
-                <span class="photo-match-arrow">→</span>
-                <div class="photo-match-swatch" style="background:${m.tube.hex}"></div>
-                <span class="photo-match-name">${stripCode(m.tube.tube)}</span>
-            </div>`;
+
+        // Extracted colours from photo
+        document.getElementById('photoExtractedRow').innerHTML = photoMatches.map(m => {
+            const hex = '#' + m.rgb.map(v => v.toString(16).padStart(2,'0')).join('');
+            return `<div class="photo-extracted-swatch" style="background:${hex}" title="${hex}"></div>`;
         }).join('');
-        document.getElementById('photoResult').style.display = '';
-        document.getElementById('photoGenerateResult').innerHTML = '';
-        document.getElementById('photoGenerateBtn').disabled = false;
-        document.getElementById('photoGenerateBtn').textContent = 'Generate palette';
-    }
-    function renderPhotoPalette(data) {
-        const n = data.colors.length;
-        let html = `<div class="palette-grid active" style="grid-template-columns:repeat(${n},1fr)">`;
-        data.colors.forEach(c => {
-            const tc = getTextColor(c.hex_code);
-            html += `<div class="color-card" style="background:${c.hex_code};color:${tc}"><div class="color-hex">${c.hex_code}</div></div>`;
-        });
-        html += `</div>`;
-        html += `<div class="palette-action-row">
+
+        // Matched Amsterdam tubes with names
+        document.getElementById('photoPaletteRow').innerHTML = photoMatches.map(m =>
+            `<div class="photo-tube-card">
+                <div class="photo-tube-swatch" style="background:${m.tube.hex}"></div>
+                <div class="photo-tube-name">${stripCode(m.tube.tube)}</div>
+            </div>`
+        ).join('');
+
+        // Download button
+        document.getElementById('photoDownloadRow').innerHTML = `
             <div class="export-dropdown">
                 <button class="export-trigger">&#8681; Download</button>
                 <div class="export-menu"><div class="export-menu-inner">
                     <button onclick="savePaletteAsPng()"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square colour swatches</span></span></button>
                     <button onclick="savePaletteAsStoryPng()"><span>&#128247;</span><span><span class="menu-label">Story (9:16)</span><br><span class="menu-desc">Vertical for Instagram</span></span></button>
                 </div></div>
-            </div>
-        </div>`;
-        document.getElementById('photoGenerateResult').innerHTML = html;
-    }
+            </div>`;
 
-    async function doPhotoGenerate() {
-        if (!photoMatches.length) return;
-        const btn = document.getElementById('photoGenerateBtn');
-        const result = document.getElementById('photoGenerateResult');
-        btn.disabled = true; btn.textContent = 'Generating...';
-        result.innerHTML = '<div class="loading">Mixing colors<span class="loading-dots"></span></div>';
-        const baseColors = photoMatches.map(m => ({name: m.tube.tube, hex: m.tube.hex}));
-        try {
-            const r = await fetch('/palette/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt:'colours inspired by uploaded photo', num_colors: cfgNumColors, base_colors: baseColors})});
-            if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
-            const data = await r.json();
-            lastPalette = data;
-            renderPhotoPalette(data);
-        } catch(err) {
-            result.innerHTML = `<div class="error">${err.message}</div>`;
-        } finally {
-            btn.disabled = false; btn.textContent = 'Generate palette';
-        }
+        lastPalette = {
+            colors: photoMatches.map(m => ({hex_code: m.tube.hex, name: m.tube.tube})),
+            prompt: 'photo'
+        };
+        document.getElementById('photoResult').style.display = '';
     }
     // --- End photo section ---
 
