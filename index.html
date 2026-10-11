@@ -743,6 +743,26 @@
         document.getElementById('photoGenerateBtn').disabled = false;
         document.getElementById('photoGenerateBtn').textContent = 'Generate palette';
     }
+    function renderPhotoPalette(data) {
+        const n = data.colors.length;
+        let html = `<div class="palette-grid active" style="grid-template-columns:repeat(${n},1fr)">`;
+        data.colors.forEach(c => {
+            const tc = getTextColor(c.hex_code);
+            html += `<div class="color-card" style="background:${c.hex_code};color:${tc}"><div class="color-hex">${c.hex_code}</div></div>`;
+        });
+        html += `</div>`;
+        html += `<div class="palette-action-row">
+            <div class="export-dropdown">
+                <button class="export-trigger">&#8681; Download</button>
+                <div class="export-menu"><div class="export-menu-inner">
+                    <button onclick="savePaletteAsPng()"><span>&#128960;</span><span><span class="menu-label">Palette</span><br><span class="menu-desc">Square colour swatches</span></span></button>
+                    <button onclick="savePaletteAsStoryPng()"><span>&#128247;</span><span><span class="menu-label">Story (9:16)</span><br><span class="menu-desc">Vertical for Instagram</span></span></button>
+                </div></div>
+            </div>
+        </div>`;
+        document.getElementById('photoGenerateResult').innerHTML = html;
+    }
+
     async function doPhotoGenerate() {
         if (!photoMatches.length) return;
         const btn = document.getElementById('photoGenerateBtn');
@@ -755,7 +775,7 @@
             if (!r.ok) { const e = await r.json(); throw new Error(e.detail||'Failed'); }
             const data = await r.json();
             lastPalette = data;
-            renderPalette(data, 'photoGenerateResult', true, true);
+            renderPhotoPalette(data);
         } catch(err) {
             result.innerHTML = `<div class="error">${err.message}</div>`;
         } finally {
