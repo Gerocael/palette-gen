@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Palette Gen</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
@@ -32,6 +32,7 @@
         .nav-brand { display: flex; flex-direction: column; gap: 1px; margin-right: auto; text-decoration: none; }
         .nav-brand-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--tx-b); line-height: 1.2; }
         .nav-brand-sub { font-size: 0.68rem; color: var(--tx-3); letter-spacing: 0.2px; line-height: 1; }
+        .nav-links { display: flex; align-items: center; gap: 16px; }
         .nav-btn { padding: 8px 16px; background: transparent; color: var(--tx-3); border: 1px solid var(--bd); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .nav-btn:hover { background: var(--surf); color: var(--tx-2); border-color: var(--bd-h); }
         .nav-btn.active { background: var(--btn); color: var(--btn-tx); border-color: var(--btn); }
@@ -87,7 +88,8 @@
         .export-trigger:hover { background: var(--surf-h); border-color: var(--bd-h); }
         .export-menu { display: none; position: absolute; left: 50%; transform: translateX(-50%); top: 100%; padding-top: 4px; z-index: 100; }
         .export-menu-inner { background: var(--surf); border: 1px solid var(--bd-m); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); min-width: 170px; overflow: hidden; }
-        .export-dropdown:hover .export-menu { display: block; }
+        @media (hover: hover) { .export-dropdown:hover .export-menu { display: block; } }
+        @media (hover: none) { .export-dropdown.open .export-menu { display: block; } .color-mix-btn { opacity: 1; } }
         .export-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; background: none; border: none; color: var(--tx-2); font-size: 0.82rem; text-align: left; cursor: pointer; }
         .export-menu button:hover { background: var(--surf-h); }
         .export-menu .menu-label { font-weight: 600; }
@@ -292,18 +294,71 @@
         .photo-tube-swatch { width: 100%; flex: 1; min-height: 90px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
         .photo-tube-name { font-size: 0.72rem; color: var(--tx-3); text-align: center; line-height: 1.3; margin-top: 6px; }
         .footer { text-align: center; color: var(--tx-3); font-size: 0.75rem; margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--bd-s); }
+        html { -webkit-text-size-adjust: 100%; }
+        button, .shelf-chip, .shelf-toggle-opt, .photo-drop-zone { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .nav { padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); padding-top: calc(14px + env(safe-area-inset-top)); }
+        /* Tablet and below: stack settings above content */
         @media (max-width: 768px) {
-            .page-wrapper { flex-direction: column; padding: 0 16px; }
+            .page-wrapper { flex-direction: column; gap: 0; padding: 0 max(16px, env(safe-area-inset-left)); }
             .config-panel { width: 100%; position: static; padding-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
             .config-heading { display: none; }
             .config-item { margin-bottom: 0; }
+            .container { width: 100%; padding: 28px 0 40px; }
+            /* 16px inputs stop iOS Safari zooming the page on focus */
+            input { font-size: 16px !important; }
+            .nav { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+            .tube-picker-dropdown { width: min(300px, calc(100vw - 32px)); }
         }
+        /* Phones */
         @media (max-width: 600px) {
-            .nav-brand-sub { display: none; } .nav-inner { gap: 8px; } .nav-btn { padding: 8px 12px; font-size: 0.8rem; }
-            .color-card { min-height: 160px; padding: 10px 8px; }
-            .color-ratio { font-size: 0.7rem; top: 8px; left: 8px; } .input-group { flex-direction: column; } .mix-inputs { flex-wrap: wrap; }
+            /* Nav: brand + theme toggle on row 1, scrollable section tabs on row 2 */
+            .nav { padding-top: calc(10px + env(safe-area-inset-top)); padding-bottom: 10px; }
+            .nav-inner { flex-wrap: wrap; gap: 8px 8px; }
+            .nav-brand { order: 0; flex: 1; margin-right: 0; }
+            .theme-btn { order: 1; }
+            .nav-links { order: 2; width: 100%; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+            .nav-links::-webkit-scrollbar { display: none; }
+            .nav-links .nav-btn { flex: 1 0 auto; padding: 8px 12px; font-size: 0.8rem; }
+            .nav-brand-sub { display: block; }
+            .section-title { font-size: 1.25rem; }
+            .color-card { min-height: 160px; padding: 10px 6px; }
+            .color-hex { font-size: 0.66rem; letter-spacing: 0; }
+            .color-ratio { font-size: 0.7rem; top: 8px; left: 8px; }
+            .input-group { flex-direction: column; margin-bottom: 28px; }
+            .input-group button { width: 100%; }
+            .mix-inputs { flex-wrap: wrap; }
+            .tube-picker { flex: 1 1 100%; }
+            .tube-picker-dropdown { width: 100%; }
+            .mix-plus { width: 100%; text-align: center; }
+            .shelf-mix-inputs > * { flex: 1 1 100%; }
+            .shelf-search { flex-wrap: wrap; }
+            .shelf-search input { flex: 1 1 100%; }
+            .shelf-search .save-btn { flex: 1; padding: 10px 12px; }
+            .shelf-io-row { flex-wrap: wrap; }
+            .shelf-io-row .save-btn { flex: 1; padding: 10px 12px; }
+            .shelf-chip { width: 32px; height: 32px; }
+            .recipe-section, .technique-card { padding: 16px; }
             .recipe-row { gap: 10px; }
-            .shelf-chip { width: 30px; height: 30px; }
+            .recipe-swatch { width: 28px; height: 28px; }
+            .mix-result-header { flex-direction: column; }
+            .mix-color-preview { width: 100%; min-height: 72px; }
+            .mix-info { padding: 16px; }
+            .mix-mode-tabs { flex-wrap: wrap; }
+            .pigment-table { display: block; overflow-x: auto; }
+            .photo-drop-zone { padding: 36px 16px; }
+            .photo-preview-img { width: 100%; max-height: 240px; }
+            .photo-palette-row { gap: 5px; }
+            .photo-tube-swatch { min-height: 72px; border-radius: 8px; }
+            .photo-tube-name { font-size: 0.64rem; word-break: break-word; }
+            .variation-wrapper .save-btn { padding: 8px 14px; margin: 2px; }
+            .palette-action-row { flex-wrap: wrap; }
+            .footer { margin-top: 40px; }
+        }
+        /* Very small phones */
+        @media (max-width: 380px) {
+            .nav-brand-name { font-size: 1rem; }
+            .color-hex { font-size: 0.6rem; }
+            .photo-tube-name { font-size: 0.58rem; }
         }
     </style>
 </head>
@@ -314,12 +369,13 @@
             <span class="nav-brand-name">Palette Gen</span>
             <span class="nav-brand-sub">Amsterdam Standard Series acrylics</span>
         </a>
-        <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
-        <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
-        <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
-
-        <button class="nav-btn" onclick="showSection('photoSection',this)">From Photo</button>
-        <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
+        <div class="nav-links">
+            <button class="nav-btn active" onclick="showSection('generateSection',this)">Generate</button>
+            <button class="nav-btn" onclick="showSection('mixSection',this)">Mix</button>
+            <button class="nav-btn" onclick="showSection('complementSection',this)">Complement</button>
+            <button class="nav-btn" onclick="showSection('photoSection',this)">From Photo</button>
+            <button class="nav-btn" onclick="showSection('shelfSection',this)">My Shelf</button>
+        </div>
         <button class="nav-btn theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
     </div></nav>
     <div class="page-wrapper">
@@ -704,7 +760,17 @@
     }
     function loadPhotoFile(file) {
         const img = document.getElementById('photoPreviewImg');
-        img.onload = () => processPhoto(img);
+        img.onload = () => {
+            // Downscale before extraction: full-size phone photos are slow and can exceed canvas limits
+            const scale = Math.min(1, 300 / Math.max(img.naturalWidth, img.naturalHeight));
+            const c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+            c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            const small = new Image();
+            small.onload = () => processPhoto(small);
+            small.src = c.toDataURL('image/png');
+        };
         img.src = URL.createObjectURL(file);
     }
     function processPhoto(img) {
@@ -783,6 +849,15 @@
         link.click();
     }
     // --- End photo section ---
+
+    // Touch devices have no hover: tap the Download trigger to open its menu, tap elsewhere to close
+    document.addEventListener('click', e => {
+        const trig = e.target.closest('.export-dropdown .export-trigger');
+        document.querySelectorAll('.export-dropdown.open').forEach(d => {
+            if (!trig || d !== trig.parentElement) d.classList.remove('open');
+        });
+        if (trig) trig.parentElement.classList.toggle('open');
+    });
 
     const ttEl = document.getElementById('shelfTooltip');
     const ttName = document.getElementById('ttName');
